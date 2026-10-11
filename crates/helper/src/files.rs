@@ -3,7 +3,7 @@
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Replaces `path` with `contents` so that anything reading it sees either the
 /// old file or the new one, never half of each: the new file is written
@@ -30,9 +30,40 @@ pub fn write_atomically(path: &Path, contents: &[u8], mode: u32) -> io::Result<(
     fs::rename(&temporary, path)
 }
 
+/// The first part of `path` that's a symbolic link, if any, checking only
+/// the parts that exist. Root follows links, so a folder that looks like
+/// `~/Network/media` could otherwise lead anywhere.
+pub fn find_symlink(path: &Path) -> io::Result<Option<PathBuf>> {
+    let mut so_far = PathBuf::new();
+    for part in path.components() {
+        so_far.push(part);
+        match fs::symlink_metadata(&so_far) {
+            Ok(metadata) if metadata.file_type().is_symlink() => return Ok(Some(so_far)),
+            Ok(_) => {}
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_symlinks_on_the_way() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real");
+        fs::create_dir(&real).unwrap();
+        std::os::unix::fs::symlink("/etc", dir.path().join("link")).unwrap();
+
+        assert_eq!(find_symlink(&real.join("missing/folder")).unwrap(), None);
+        assert_eq!(
+            find_symlink(&dir.path().join("link/missing")).unwrap(),
+            Some(dir.path().join("link"))
+        );
+    }
 
     #[test]
     fn writes_and_replaces() {

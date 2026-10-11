@@ -44,11 +44,23 @@ pub struct NfsExport {
     pub clients: Vec<NfsClient>,
 }
 
+/// Refuses to share a system folder (`/`, `/etc`, ...): their files aren't
+/// anyone's to hand out, and some are secret.
+pub fn check_shareable(path: &AbsolutePath) -> Result<(), InvalidValue> {
+    match path.system_folder() {
+        Some(folder) => Err(InvalidValue(format!(
+            "{folder} belongs to the system and can't be shared."
+        ))),
+        None => Ok(()),
+    }
+}
+
 /// Checks what the individual names and paths can't: that shares don't clash,
-/// and that each is open to someone.
+/// that each is open to someone, and that none is a system folder.
 pub fn check_smb_shares(shares: &[SmbShare]) -> Result<(), InvalidValue> {
     let mut seen = HashSet::new();
     for share in shares {
+        check_shareable(&share.path)?;
         // Clients look shares up without regard to case.
         if !seen.insert(share.name.as_str().to_lowercase()) {
             return Err(InvalidValue(format!(
@@ -68,10 +80,12 @@ pub fn check_smb_shares(shares: &[SmbShare]) -> Result<(), InvalidValue> {
     Ok(())
 }
 
-/// Checks that no folder is exported twice and that each export names a client.
+/// Checks that no folder is exported twice, that each export names a client,
+/// and that none is a system folder.
 pub fn check_nfs_exports(exports: &[NfsExport]) -> Result<(), InvalidValue> {
     let mut seen = HashSet::new();
     for export in exports {
+        check_shareable(&export.path)?;
         if !seen.insert(export.path.as_str()) {
             return Err(InvalidValue(format!("{} is exported twice.", export.path)));
         }
@@ -114,6 +128,13 @@ mod tests {
             ])
             .is_err()
         );
+    }
+
+    #[test]
+    fn system_folders_are_not_shared() {
+        let mut share = smb("Etc", SmbAccess::Guest);
+        share.path = AbsolutePath::new("/etc").unwrap();
+        assert!(check_smb_shares(&[share]).is_err());
     }
 
     #[test]

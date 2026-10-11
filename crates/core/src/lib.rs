@@ -32,5 +32,7 @@ pub use mount::{
 };
 pub use names::{AbsolutePath, InvalidValue, NfsClient, RemoteName, ShareName, UserName};
 pub use request::{Request, Secret};
-pub use share::{NfsExport, SmbAccess, SmbShare, check_nfs_exports, check_smb_shares};
+pub use share::{
+    NfsExport, SmbAccess, SmbShare, check_nfs_exports, check_shareable, check_smb_shares,
+};
 pub use state::State;

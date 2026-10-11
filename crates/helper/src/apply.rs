@@ -10,7 +10,10 @@ use std::path::Path;
 
 use netfoo_core::linux::{Paths, nfs, samba};
 use netfoo_core::state::StateError;
-use netfoo_core::{InvalidValue, Owner, Request, State, check_nfs_exports, check_smb_shares};
+use netfoo_core::{
+    AbsolutePath, InvalidValue, Owner, Request, State, check_nfs_exports, check_shareable,
+    check_smb_shares,
+};
 
 use crate::files::write_atomically;
 use crate::mounts;
@@ -43,6 +46,9 @@ pub fn apply(
     match request {
         Request::SetSmbShares { shares } => {
             check_smb_shares(shares)?;
+            for share in shares {
+                check_real_path(&share.path)?;
+            }
             let mut state = State::load(&paths.state)?;
             state.smb_shares = shares.clone();
 
@@ -53,6 +59,9 @@ pub fn apply(
         }
         Request::SetNfsExports { exports } => {
             check_nfs_exports(exports)?;
+            for export in exports {
+                check_real_path(&export.path)?;
+            }
             let mut state = State::load(&paths.state)?;
             state.nfs_exports = exports.clone();
 
@@ -61,6 +70,12 @@ pub fn apply(
             services.reload_nfs_exports()?;
         }
         Request::SetSmbPassword { user, password } => {
+            if !services.is_person(user) {
+                return Err(InvalidValue(format!(
+                    "Samba passwords are for people's accounts, and {user} isn't one."
+                ))
+                .into());
+            }
             services.set_smb_password(user, password)?;
         }
         Request::SetSmbMount { mount, password } => {
@@ -70,6 +85,17 @@ pub fn apply(
             mounts::remove(mount_point, paths, services)?;
         }
     }
+    Ok(())
+}
+
+/// Checks where a shared folder really is, following symbolic links, so a
+/// link to a system folder can't be shared. A folder that doesn't exist yet
+/// has only its name to check, which `check_shareable` already did.
+fn check_real_path(path: &AbsolutePath) -> Result<(), ApplyError> {
+    let Ok(real) = std::fs::canonicalize(path.as_str()) else {
+        return Ok(());
+    };
+    check_shareable(&AbsolutePath::new(real.to_string_lossy())?)?;
     Ok(())
 }
 
@@ -120,11 +146,19 @@ mod tests {
 
     /// Records what would have been run.
     #[derive(Default)]
-    struct Recorded(RefCell<Vec<String>>);
+    struct Recorded {
+        log: RefCell<Vec<String>>,
+        /// Units that exist without netfoo (an admin's, or mounted now).
+        units_in_use: Vec<String>,
+    }
 
     impl Recorded {
         fn record(&self, what: String) {
-            self.0.borrow_mut().push(what);
+            self.log.borrow_mut().push(what);
+        }
+
+        fn log(&self) -> Vec<String> {
+            self.log.borrow().clone()
         }
     }
 
@@ -156,9 +190,15 @@ mod tests {
             self.record(format!("start {unit}"));
             Ok(())
         }
+        fn unit_in_use(&self, unit: &str) -> bool {
+            self.units_in_use.iter().any(|other| other == unit)
+        }
         fn prepare_mount_point(&self, path: &AbsolutePath) -> Result<(), String> {
             self.record(format!("prepare {path}"));
             Ok(())
+        }
+        fn is_person(&self, user: &UserName) -> bool {
+            user.as_str() != "root"
         }
     }
 
@@ -214,7 +254,7 @@ mod tests {
             State::load(&paths.state).unwrap().smb_shares,
             [media_share()]
         );
-        assert_eq!(*services.0.borrow(), ["reload samba"]);
+        assert_eq!(services.log(), ["reload samba"]);
     }
 
     #[test]
@@ -255,7 +295,7 @@ mod tests {
         assert_eq!(state.nfs_exports, [export]);
         let nfs_exports = fs::read_to_string(&paths.nfs_exports).unwrap();
         assert!(nfs_exports.contains("/srv/media *(rw,"));
-        assert_eq!(*services.0.borrow(), ["reload samba", "reload nfs"]);
+        assert_eq!(services.log(), ["reload samba", "reload nfs"]);
     }
 
     #[test]
@@ -321,10 +361,8 @@ mod tests {
         );
 
         assert_eq!(
-            *services.0.borrow(),
+            services.log(),
             [
-                "disable home-alice-Network-media.automount",
-                "disable home-alice-Network-media.mount",
                 "prepare /home/alice/Network/media",
                 "reload units",
                 "enable home-alice-Network-media.automount",
@@ -371,7 +409,7 @@ mod tests {
         );
         assert_eq!(State::load(&paths.state).unwrap().smb_mounts.len(), 1);
         assert_eq!(
-            services.0.borrow().last().unwrap(),
+            services.log().last().unwrap(),
             "enable home-alice-Network-media.mount"
         );
     }
@@ -408,7 +446,7 @@ mod tests {
             &services,
         );
         assert!(matches!(result, Err(ApplyError::Invalid(_))));
-        assert!(services.0.borrow().is_empty());
+        assert!(services.log().is_empty());
     }
 
     #[test]
@@ -433,5 +471,68 @@ mod tests {
         assert_eq!(fs::read_dir(&paths.systemd_units).unwrap().count(), 0);
         assert!(!paths.credentials.join("home-alice-Network-media").exists());
         assert!(State::load(&paths.state).unwrap().smb_mounts.is_empty());
+    }
+
+    #[test]
+    fn mounts_netfoo_did_not_make_are_left_alone() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded {
+            units_in_use: vec!["home-alice-Network-media.mount".into()],
+            ..Recorded::default()
+        };
+
+        let mount = nas_media(MountWhen::FirstAccess);
+        let mount_point = mount.mount_point.clone();
+        let request = Request::SetSmbMount {
+            mount,
+            password: password(),
+        };
+        assert!(matches!(
+            run(request, &paths, &services),
+            Err(ApplyError::MountPoint(_))
+        ));
+
+        let result = run(Request::RemoveSmbMount { mount_point }, &paths, &services);
+        assert!(matches!(result, Err(ApplyError::Invalid(_))));
+        // Nothing stopped, nothing written.
+        assert!(services.log().is_empty());
+        assert!(!paths.systemd_units.exists());
+    }
+
+    #[test]
+    fn samba_passwords_are_for_people() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+        let user = UserName::new("root").unwrap();
+        let request = Request::SetSmbPassword {
+            user,
+            password: Secret("pw".into()),
+        };
+        assert!(matches!(
+            run(request, &paths, &services),
+            Err(ApplyError::Invalid(_))
+        ));
+        assert!(services.log().is_empty());
+    }
+
+    #[test]
+    fn links_to_system_folders_are_not_shared() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let link = root.path().join("media");
+        std::os::unix::fs::symlink("/etc", &link).unwrap();
+
+        let mut share = media_share();
+        share.path = AbsolutePath::new(link.to_string_lossy()).unwrap();
+        let result = run(
+            Request::SetSmbShares {
+                shares: vec![share],
+            },
+            &paths,
+            &Recorded::default(),
+        );
+        assert!(matches!(result, Err(ApplyError::Invalid(_))));
     }
 }

@@ -20,7 +20,8 @@ use crate::files::write_atomically;
 use crate::services::Services;
 
 /// Mounts `mount` for `owner`, replacing any netfoo mount on the same folder,
-/// and checks it connects.
+/// and checks it connects. A folder with a mount netfoo didn't set up (its own
+/// unit, an fstab line, anything mounted there now) is refused and left alone.
 pub fn set(
     mount: &SmbMount,
     password: Option<&Secret>,
@@ -38,10 +39,21 @@ pub fn set(
         owner,
     };
 
-    // Whatever netfoo mounted on this folder before (an earlier version of
-    // this mount) is unmounted first, so the folder can be checked.
-    services.disable_now(&names.automount);
-    services.disable_now(&names.mount);
+    let mut state = State::load(&paths.state)?;
+    let ours = state
+        .smb_mounts
+        .iter()
+        .any(|other| other.mount.mount_point == mount.mount_point);
+    if ours {
+        // An earlier version of this mount: unmounted first, so the folder can be checked.
+        services.disable_now(&names.automount);
+        services.disable_now(&names.mount);
+    } else if services.unit_in_use(&names.mount) || services.unit_in_use(&names.automount) {
+        return Err(ApplyError::MountPoint(format!(
+            "{} already has a mount that netfoo didn't set up, so netfoo leaves it alone.",
+            mount.mount_point
+        )));
+    }
     services
         .prepare_mount_point(&mount.mount_point)
         .map_err(ApplyError::MountPoint)?;
@@ -72,7 +84,6 @@ pub fn set(
         MountWhen::Startup => remove_if_present(&automount_unit)?,
     }
 
-    let mut state = State::load(&paths.state)?;
     state
         .smb_mounts
         .retain(|other| other.mount.mount_point != mount.mount_point);
@@ -92,12 +103,20 @@ pub fn set(
 }
 
 /// Unmounts the share on `mount_point` and removes its units and
-/// credentials. The folder itself stays.
+/// credentials. The folder itself stays. Only netfoo's own mounts can be removed.
 pub fn remove(
     mount_point: &AbsolutePath,
     paths: &Paths,
     services: &impl Services,
 ) -> Result<(), ApplyError> {
+    let mut state = State::load(&paths.state)?;
+    if !state
+        .smb_mounts
+        .iter()
+        .any(|other| &other.mount.mount_point == mount_point)
+    {
+        return Err(InvalidValue(format!("{mount_point} isn't one of netfoo's mounts.")).into());
+    }
     let names = UnitNames::for_mount_point(mount_point);
     services.disable_now(&names.automount);
     services.disable_now(&names.mount);
@@ -110,7 +129,6 @@ pub fn remove(
         remove_if_present(&path)?;
     }
 
-    let mut state = State::load(&paths.state)?;
     state
         .smb_mounts
         .retain(|other| &other.mount.mount_point != mount_point);

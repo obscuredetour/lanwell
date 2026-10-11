@@ -12,6 +12,7 @@ use zbus::message::Header;
 use zbus::names::UniqueName;
 
 use crate::services::SystemServices;
+use crate::users::primary_group;
 use crate::{apply, polkit};
 
 /// How long the helper waits for another request before exiting. D-Bus starts
@@ -100,26 +101,6 @@ async fn caller_account(
     let gid = primary_group(uid)
         .ok_or_else(|| fdo::Error::Failed(format!("User {uid} has no account here.")))?;
     Ok(Owner { uid, gid })
-}
-
-/// `uid`'s primary group, from the system's user database (/etc/passwd, or
-/// whatever else it's configured to use).
-fn primary_group(uid: u32) -> Option<u32> {
-    let mut entry: libc::passwd = unsafe { std::mem::zeroed() };
-    let mut found: *mut libc::passwd = std::ptr::null_mut();
-    let mut buffer = vec![0 as libc::c_char; 16 * 1024];
-    // SAFETY: getpwuid_r writes only into `entry` and `buffer` (whose length it's
-    // given), and sets `found` to `&entry` on success or null if there's none.
-    let status = unsafe {
-        libc::getpwuid_r(
-            uid,
-            &mut entry,
-            buffer.as_mut_ptr(),
-            buffer.len(),
-            &mut found,
-        )
-    };
-    (status == 0 && !found.is_null()).then_some(entry.pw_gid)
 }
 
 /// Tracks when the helper was last used, so it can exit when it isn't.

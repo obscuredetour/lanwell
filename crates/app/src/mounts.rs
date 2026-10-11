@@ -24,6 +24,7 @@ pub fn statuses(mounts: &[ManagedMount]) -> Vec<MountStatus> {
                     "show",
                     "--property=ActiveState",
                     "--value",
+                    "--",
                     &names.mount,
                     &names.automount,
                 ])

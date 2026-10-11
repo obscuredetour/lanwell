@@ -60,12 +60,16 @@ pub fn render_mount_unit(managed: &ManagedMount, credentials: &str) -> String {
         MountLogin::Guest => "guest".to_string(),
         MountLogin::User { .. } => format!("credentials={credentials}"),
     }];
-    // SMB has no Unix owners: every file appears as the person who added the mount.
+    // Every file appears as the person who added the mount, and only theirs to
+    // read. force*: even if the server sends its own owners (Unix extensions).
     options.push(format!(
-        "uid={},gid={}",
+        "uid={},gid={},forceuid,forcegid",
         managed.owner.uid, managed.owner.gid
     ));
-    options.push("file_mode=0644,dir_mode=0755,iocharset=utf8".into());
+    options.push("file_mode=0600,dir_mode=0700,iocharset=utf8".into());
+    // The server decides what's on the share, so nothing on it may act as
+    // another user (setuid) or as a device.
+    options.push("nosuid,nodev".into());
     if mount.read_only {
         options.push("ro".into());
     }
@@ -188,7 +192,7 @@ mod tests {
         assert!(unit.contains("What=//nas.lan/media\n"));
         assert!(unit.contains("Where=/home/alice/Network/media\n"));
         assert!(unit.contains(
-            "Options=credentials=/etc/netfoo/credentials/home-alice-Network-media,uid=1000,gid=1000,file_mode=0644,dir_mode=0755,iocharset=utf8\n"
+            "Options=credentials=/etc/netfoo/credentials/home-alice-Network-media,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,nosuid,nodev\n"
         ));
         // The automount is what's enabled, not the mount.
         assert!(!unit.contains("[Install]"));
@@ -204,7 +208,7 @@ mod tests {
         managed.mount.read_only = true;
         managed.mount.version = SmbVersion::V3_0;
         let unit = render_mount_unit(&managed, "unused");
-        assert!(unit.contains("Options=guest,uid=1000,gid=1000,file_mode=0644,dir_mode=0755,iocharset=utf8,ro,vers=3.0\n"));
+        assert!(unit.contains("Options=guest,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,nosuid,nodev,ro,vers=3.0\n"));
         assert!(unit.ends_with("[Install]\nWantedBy=remote-fs.target\n"));
     }
 

@@ -20,6 +20,7 @@ mod apply;
 mod files;
 mod mounts;
 mod services;
+mod users;
 
 #[cfg(target_os = "linux")]
 mod bus;

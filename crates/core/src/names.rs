@@ -152,7 +152,31 @@ fn check_absolute_path(path: &str) -> Result<(), InvalidValue> {
     if path.split('/').any(|part| part == "..") {
         return Err(invalid("A path can't contain \"..\"."));
     }
+    // smb.conf reads a line ending in \ as continuing on the next one.
+    if path.ends_with('\\') {
+        return Err(invalid("A path can't end with \\."));
+    }
     Ok(())
+}
+
+/// Folders that belong to the system: nothing is shared from them or
+/// mounted on them.
+const SYSTEM_FOLDERS: [&str; 15] = [
+    "/bin", "/boot", "/dev", "/efi", "/etc", "/lib", "/lib32", "/lib64", "/proc", "/root", "/run",
+    "/sbin", "/sys", "/usr", "/var",
+];
+
+impl AbsolutePath {
+    /// The system folder this is, or is inside, if any (`/` counts as one).
+    /// Compares the text only; the helper resolves symbolic links first.
+    pub fn system_folder(&self) -> Option<&'static str> {
+        let path = self.0.as_str();
+        if path.trim_end_matches('/').is_empty() {
+            return Some("/");
+        }
+        let inside = |folder: &str| path == folder || path.starts_with(&format!("{folder}/"));
+        SYSTEM_FOLDERS.iter().copied().find(|folder| inside(folder))
+    }
 }
 
 /// Which machines may mount an NFS export: a host name (`laptop.lan`), an
@@ -236,6 +260,18 @@ mod tests {
         assert!(AbsolutePath::new("/srv/media\n[x]").is_err());
         assert!(AbsolutePath::new("/srv/../etc").is_err());
         assert!(AbsolutePath::new("/srv/media ").is_err());
+        assert!(AbsolutePath::new("/srv/media\\").is_err());
+    }
+
+    #[test]
+    fn system_folders() {
+        let folder = |path: &str| AbsolutePath::new(path).unwrap().system_folder();
+        assert_eq!(folder("/"), Some("/"));
+        assert_eq!(folder("/etc"), Some("/etc"));
+        assert_eq!(folder("/usr/local/media"), Some("/usr"));
+        assert_eq!(folder("/srv/media"), None);
+        // Only the folder itself, not every name that starts the same.
+        assert_eq!(folder("/variety"), None);
     }
 
     #[test]

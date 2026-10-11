@@ -230,29 +230,18 @@ impl<'de> Deserialize<'de> for SmbAddress {
     }
 }
 
-/// Folders a share must never be mounted on, or in: the system's own.
-const SYSTEM_FOLDERS: [&str; 13] = [
-    "/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/proc", "/root", "/run", "/sbin", "/sys",
-    "/usr", "/var",
-];
-
-/// Checks a folder can take a mount: not the root or a system folder, and
-/// written plainly (no `//`, no trailing `/`), since its systemd unit is
-/// named after it.
+/// Checks a folder can take a mount: not a system folder, and written
+/// plainly (no `//`, no trailing `/`), since its systemd unit is named after it.
 pub fn check_mount_point(path: &AbsolutePath) -> Result<(), InvalidValue> {
-    let path = path.as_str();
-    if path == "/" {
-        return Err(invalid("A share can't be mounted over the whole system."));
-    }
-    if path.ends_with('/') || path.contains("//") || path.split('/').any(|part| part == ".") {
-        return Err(invalid(format!(
-            "Write {path} without extra slashes or dots."
-        )));
-    }
-    let inside = |folder: &str| path == folder || path.starts_with(&format!("{folder}/"));
-    if let Some(folder) = SYSTEM_FOLDERS.iter().find(|folder| inside(folder)) {
+    if let Some(folder) = path.system_folder() {
         return Err(invalid(format!(
             "{folder} belongs to the system; mount the share somewhere else."
+        )));
+    }
+    let text = path.as_str();
+    if text.ends_with('/') || text.contains("//") || text.split('/').any(|part| part == ".") {
+        return Err(invalid(format!(
+            "Write {text} without extra slashes or dots."
         )));
     }
     Ok(())

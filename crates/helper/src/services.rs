@@ -13,6 +13,9 @@ use netfoo_core::linux::cifs::explain_mount_failure;
 use netfoo_core::system::find_program;
 use netfoo_core::{AbsolutePath, Secret, UserName};
 
+use crate::files::find_symlink;
+use crate::users;
+
 pub trait Services {
     /// Makes Samba pick up changed shares, if it's running.
     fn reload_samba(&self) -> Result<(), CommandError>;
@@ -28,9 +31,15 @@ pub trait Services {
     fn disable_now(&self, unit: &str);
     /// Starts `unit` now. If it's a mount that fails, says why.
     fn start(&self, unit: &str) -> Result<(), CommandError>;
-    /// Makes sure a share can be mounted on `path`: creates it if it's
-    /// missing, and refuses it if it has files in it (mounting would hide them).
+    /// Whether `unit` is set up or active: a unit file anywhere, or a mount
+    /// that's mounted now. Used to leave alone mounts netfoo didn't make.
+    fn unit_in_use(&self, unit: &str) -> bool;
+    /// Makes sure a share can be mounted on `path`: refuses it if any part of
+    /// it is a symbolic link, or if it has files in it (mounting would hide
+    /// them), and creates it if it's missing.
     fn prepare_mount_point(&self, path: &AbsolutePath) -> Result<(), String>;
+    /// Whether `user` is a person's account, not root or a system account.
+    fn is_person(&self, user: &UserName) -> bool;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -81,21 +90,47 @@ impl Services for SystemServices {
         run("systemctl", &["daemon-reload"], None).map(drop)
     }
 
+    // `--` before unit names: a name can't then be read as an option.
     fn enable_now(&self, unit: &str) -> Result<(), CommandError> {
-        explained(unit, || run("systemctl", &["enable", "--now", unit], None))
+        explained(unit, || {
+            run("systemctl", &["enable", "--now", "--", unit], None)
+        })
     }
 
     fn disable_now(&self, unit: &str) {
         // Fails when there's no such unit, which is fine: nothing to stop.
-        let _ = run("systemctl", &["disable", "--now", unit], None);
+        let _ = run("systemctl", &["disable", "--now", "--", unit], None);
     }
 
     fn start(&self, unit: &str) -> Result<(), CommandError> {
-        explained(unit, || run("systemctl", &["start", unit], None))
+        explained(unit, || run("systemctl", &["start", "--", unit], None))
+    }
+
+    fn unit_in_use(&self, unit: &str) -> bool {
+        let args = ["show", "--property=FragmentPath,ActiveState", "--", unit];
+        let Ok(output) = run("systemctl", &args, None) else {
+            return false;
+        };
+        output.lines().any(|line| {
+            line == "ActiveState=active"
+                || line
+                    .strip_prefix("FragmentPath=")
+                    .is_some_and(|path| !path.is_empty())
+        })
     }
 
     fn prepare_mount_point(&self, path: &AbsolutePath) -> Result<(), String> {
         let folder = Path::new(path.as_str());
+        match find_symlink(folder) {
+            Ok(None) => {}
+            Ok(Some(link)) => {
+                return Err(format!(
+                    "{} is a symbolic link; choose a folder whose path has none.",
+                    link.display()
+                ));
+            }
+            Err(e) => return Err(format!("Couldn't check {path}: {e}")),
+        }
         match std::fs::read_dir(folder) {
             Ok(mut entries) => match entries.next() {
                 Some(_) => Err(format!(
@@ -108,6 +143,10 @@ impl Services for SystemServices {
             }
             Err(e) => Err(format!("Couldn't open {path}: {e}")),
         }
+    }
+
+    fn is_person(&self, user: &UserName) -> bool {
+        users::is_person(user.as_str())
     }
 }
 
@@ -130,7 +169,12 @@ fn explained(
     let since = format!("--since=@{started}");
     let log = run(
         "journalctl",
-        &["--unit", unit, &since, "--output=cat", "--no-pager"],
+        &[
+            "--output=cat",
+            "--no-pager",
+            &since,
+            &format!("--unit={unit}"),
+        ],
         None,
     )
     .unwrap_or_default();

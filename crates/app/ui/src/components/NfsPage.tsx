@@ -98,6 +98,13 @@ function AddExport(props: { busy: boolean; onAdd: (nfsExport: NfsExport) => void
         Read only
       </label>
 
+      <Show when={!readOnly() && clientList().includes('*')}>
+        <p class="text-xs text-warning">
+          Any machine on the network will be able to change these files, as any user but root: NFS trusts what each
+          machine says about who its users are. Consider listing your own machines, or making it read only.
+        </p>
+      </Show>
+
       <Button type="submit" variant="primary" disabled={props.busy || !path() || clientList().length === 0}>
         Export
       </Button>

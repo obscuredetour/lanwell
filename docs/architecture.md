@@ -77,6 +77,20 @@ pkexec runs that binary as root, so it must come from the same place as the
 app: anyone who could replace it could replace the app too. Once installed,
 the helper D-Bus runs is the root-owned copy.
 
+**Before release builds:** offer the button only when the helper beside the
+app, and the folders above it, are owned by root and writable by no one else
+(as in a deb or rpm). Otherwise anything running as the person could replace
+it, and the app's "different build" check would ask them to install it.
+Development builds (`target/debug`) are exempt.
+
+## Sharing safely
+
+Shares and exports of system folders (`/`, /etc, ...) are refused, checked
+again on the real path once symbolic links are followed. Samba passwords can
+only be set for people's accounts (UID 1000 and up), not root or system ones.
+The app warns before exporting read-write over NFS to every machine (`*`),
+since NFS trusts what each client says about who its users are.
+
 ## Files netfoo owns (Linux)
 
 | File | What it is |
@@ -106,11 +120,17 @@ person's choice:
   Startup waits for the server, up to `TimeoutSec=30`, every time it's off;
   the UI says so before it's chosen.
 
-Files appear as the person who added the mount (`uid=`/`gid=`); the helper
-takes them from D-Bus (the caller's account), not from the request. Mounts
-default to `~/Network/<share>`; the app creates a folder in the person's home
-itself, so it's theirs. System folders (/etc, /usr, ...) are refused, and so
-is a folder with files in it, which the share would hide.
+Files appear as the person who added the mount, readable only by them
+(`uid`/`gid` with `forceuid`/`forcegid`, modes 0600/0700); the helper takes
+the account from D-Bus, not from the request. Mounts are `nosuid,nodev`: the
+server decides what's on a share, so nothing on it may run as another user.
+Mounts default to `~/Network/<share>`; the app creates a folder in the
+person's home itself, so it's theirs.
+
+The helper refuses system folders (/etc, /usr, ...), folders whose path has
+a symbolic link in it, and folders with files in them. It only replaces or
+removes mounts it recorded in its state: a folder with any other mount (an
+admin's unit, an fstab line, anything mounted now) is left alone.
 
 When mounting fails, the helper reads what mount.cifs logged for that
 attempt and explains it ("The server didn't accept the user name or
@@ -150,7 +170,8 @@ The core and UI carry over; the helper and the config rendering don't.
 6. **Packaging**: AUR first, then deb and rpm, each installing the helper
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
-   there. Flatpak's sandbox can't run pkexec on the host, so it doesn't fit.
+   there, and the root-ownership check above has to come first. Flatpak's
+   sandbox can't run pkexec on the host, so it doesn't fit.
 
 ## Decisions
 
