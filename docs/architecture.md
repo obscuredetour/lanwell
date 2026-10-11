@@ -160,17 +160,28 @@ The core and UI carry over; the helper and the config rendering don't.
 
 1. **More mounting**: find servers on the network (mDNS, WS-Discovery);
    edit a mount in place (today: remove and add it again); folders inside a
-   share (`//nas.lan/media/films`); NFS mounts.
+   share (`//nas.lan/media/films`).
 2. **Running the services**: start and enable Samba/NFS when the first share is
    added (today the helper only reloads them if they're already running), and
    open the firewall (firewalld's D-Bus API, or ufw).
 3. **Editing** a share in place (today: remove and add again).
 4. **Share-only users**: accounts that can open shares but can't log in.
 5. **macOS**, as above.
-6. **Packaging**: AUR first, then deb and rpm, each installing the helper
+6. **NFS mounts**, tested once netfoo runs on macOS (a Mac can serve NFS):
+   - Connect to a share gets an SMB / NFS switcher. Only SMB has Sign in;
+     NFS shows instead that access is decided by the server's export list,
+     and that files keep the server's user IDs (a Mac's start at 501, Linux's
+     at 1000, so the export may need `-mapall`).
+   - More options: an NFS version (Automatic, 4.2, 4.1, 3) in place of the
+     SMB one; folder, when to connect and read only stay.
+   - Units with `Type=nfs`, the same `nosuid,nodev` and ownership rules, and
+     no credentials file.
+   - Each mount in the list is tagged with its protocol (SMB is today).
+7. **Packaging**: AUR first, then deb and rpm, each installing the helper
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
-   there, and the root-ownership check above has to come first. Flatpak's
+   there, and the root-ownership check above has to come first
+   ([issue #1](https://github.com/obscuredetour/netfoo/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
 
 ## Decisions

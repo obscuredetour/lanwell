@@ -56,6 +56,15 @@ export function Field(props: ParentProps<{ label: string; hint?: string }>) {
   );
 }
 
+/** A short label beside a name, like a mount's protocol (SMB). */
+export function Tag(props: { children: string }) {
+  return (
+    <span class="rounded border border-border px-1.5 py-px align-middle text-[0.6875rem] font-medium tracking-wide text-fg-muted">
+      {props.children}
+    </span>
+  );
+}
+
 /** Something the person should know before they go on. */
 export function Notice(props: ParentProps<{ tone?: 'warning' | 'danger' }>) {
   const tone = () => (props.tone === 'danger' ? 'border-danger text-danger' : 'border-warning text-warning');

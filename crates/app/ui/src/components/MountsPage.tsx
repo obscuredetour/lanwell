@@ -15,7 +15,7 @@ import {
   type SystemInfo,
 } from '../api';
 import type { SmbVersion } from '../bindings/SmbVersion';
-import { Button, createAction, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
+import { Button, createAction, ErrorText, Field, inputClass, ItemList, Notice, Section, Tag } from './ui';
 
 /** How often the list checks what each mount is doing. */
 const STATUS_REFRESH_MS = 5000;
@@ -51,7 +51,11 @@ export function MountsPage(props: { info: SystemInfo; mounts: ManagedMount[]; on
           {(managed) => (
             <>
               <div class="min-w-0 flex-1">
-                <div class="font-medium">{managed.address}</div>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{managed.address}</span>
+                  {/* Every mount is SMB until NFS mounts arrive; then this comes from the mount. */}
+                  <Tag>SMB</Tag>
+                </div>
                 <div class="truncate font-mono text-xs text-fg-muted">
                   {tildify(managed.mountPoint, props.info.homeDir)}
                 </div>
