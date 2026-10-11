@@ -4,6 +4,7 @@
 //! Everything else in the system's config is left as it was.
 
 pub mod cifs;
+pub mod mountinfo;
 pub mod nfs;
 pub mod nfs_client;
 pub mod samba;

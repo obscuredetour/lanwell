@@ -160,7 +160,7 @@ fn check_absolute_path(path: &str) -> Result<(), InvalidValue> {
 }
 
 /// Folders that belong to the system: nothing is shared from them or
-/// mounted on them.
+/// mounted on them. (Except drives in /run/media; see [`AbsolutePath::system_folder`].)
 const SYSTEM_FOLDERS: [&str; 15] = [
     "/bin", "/boot", "/dev", "/efi", "/etc", "/lib", "/lib32", "/lib64", "/proc", "/root", "/run",
     "/sbin", "/sys", "/usr", "/var",
@@ -169,10 +169,20 @@ const SYSTEM_FOLDERS: [&str; 15] = [
 impl AbsolutePath {
     /// The system folder this is, or is inside, if any (`/` counts as one).
     /// Compares the text only; the helper resolves symbolic links first.
+    ///
+    /// Drives in /run/media (`/run/media/main`, `/run/media/alice/backup`) are
+    /// people's, not the system's: it's where many distributions and desktops
+    /// mount them. /run/media itself still isn't.
     pub fn system_folder(&self) -> Option<&'static str> {
         let path = self.0.as_str();
         if path.trim_end_matches('/').is_empty() {
             return Some("/");
+        }
+        if path
+            .strip_prefix("/run/media/")
+            .is_some_and(|rest| !rest.trim_matches('/').is_empty())
+        {
+            return None;
         }
         let inside = |folder: &str| path == folder || path.starts_with(&format!("{folder}/"));
         SYSTEM_FOLDERS.iter().copied().find(|folder| inside(folder))
@@ -272,6 +282,11 @@ mod tests {
         assert_eq!(folder("/srv/media"), None);
         // Only the folder itself, not every name that starts the same.
         assert_eq!(folder("/variety"), None);
+        // Drives in /run/media are people's; the rest of /run isn't.
+        assert_eq!(folder("/run/media/main/films"), None);
+        assert_eq!(folder("/run/media/alice/backup"), None);
+        assert_eq!(folder("/run/media"), Some("/run"));
+        assert_eq!(folder("/run/user/1000"), Some("/run"));
     }
 
     #[test]

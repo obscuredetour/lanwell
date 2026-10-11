@@ -40,6 +40,9 @@ pub trait Services {
     fn prepare_mount_point(&self, path: &AbsolutePath) -> Result<(), String>;
     /// Whether `user` is a person's account, not root or a system account.
     fn is_person(&self, user: &UserName) -> bool;
+    /// The kernel's mount table (/proc/self/mountinfo), to tell which drive a
+    /// folder is on.
+    fn mount_table(&self) -> String;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -147,6 +150,10 @@ impl Services for SystemServices {
 
     fn is_person(&self, user: &UserName) -> bool {
         users::is_person(user.as_str())
+    }
+
+    fn mount_table(&self) -> String {
+        std::fs::read_to_string("/proc/self/mountinfo").unwrap_or_default()
     }
 }
 

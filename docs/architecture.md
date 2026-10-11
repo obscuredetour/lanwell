@@ -87,7 +87,15 @@ Development builds (`target/debug`) are exempt.
 ## Sharing safely
 
 Shares and exports of system folders (`/`, /etc, ...) are refused, checked
-again on the real path once symbolic links are followed. Samba passwords can
+again on the real path once symbolic links are followed. Drives in
+/run/media (`/run/media/main`, `/run/media/alice/backup`) aren't system
+folders: many distributions and desktops mount drives there.
+
+An NFS export on a drive other than the system's own gets `mp=<that drive's
+mount point>`, so it's only exported while the drive is mounted; otherwise
+NFS would serve the empty folder underneath. The drive is found in the
+kernel's mount table, not by device numbers, which btrfs subvolumes would
+fool. An export in /run/media whose drive isn't mounted is refused. Samba passwords can
 only be set for people's accounts (UID 1000 and up), not root or system ones.
 The app warns before exporting read-write over NFS to every machine (`*`),
 since NFS trusts what each client says about who its users are.

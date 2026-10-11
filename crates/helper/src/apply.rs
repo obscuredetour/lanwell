@@ -5,9 +5,11 @@
 //! before the state, so a failure part-way leaves the state describing what
 //! was there before. Mounts are in `mounts.rs`.
 
+use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 
+use netfoo_core::linux::mountinfo::mount_point_of;
 use netfoo_core::linux::{Paths, nfs, samba};
 use netfoo_core::state::StateError;
 use netfoo_core::{
@@ -47,7 +49,7 @@ pub fn apply(
         Request::SetSmbShares { shares } => {
             check_smb_shares(shares)?;
             for share in shares {
-                check_real_path(&share.path)?;
+                real_path(&share.path)?;
             }
             let mut state = State::load(&paths.state)?;
             state.smb_shares = shares.clone();
@@ -59,13 +61,17 @@ pub fn apply(
         }
         Request::SetNfsExports { exports } => {
             check_nfs_exports(exports)?;
+            let mount_table = services.mount_table();
+            let mut drives = HashMap::new();
             for export in exports {
-                check_real_path(&export.path)?;
+                let drive = drive_of(&export.path, &mount_table)?;
+                drives.insert(export.path.clone(), drive);
             }
             let mut state = State::load(&paths.state)?;
             state.nfs_exports = exports.clone();
 
-            write(&paths.nfs_exports, &nfs::render_exports(exports))?;
+            let text = nfs::render_exports(exports, |export| drives[&export.path].clone());
+            write(&paths.nfs_exports, &text)?;
             write(&paths.state, &state.to_json())?;
             services.reload_nfs_exports()?;
         }
@@ -88,15 +94,32 @@ pub fn apply(
     Ok(())
 }
 
-/// Checks where a shared folder really is, following symbolic links, so a
-/// link to a system folder can't be shared. A folder that doesn't exist yet
-/// has only its name to check, which `check_shareable` already did.
-fn check_real_path(path: &AbsolutePath) -> Result<(), ApplyError> {
+/// Where a shared folder really is, following symbolic links, after
+/// checking it isn't a system folder (so a link to one can't be shared). A
+/// folder that doesn't exist yet has only its name to go on, which
+/// `check_shareable` already checked.
+fn real_path(path: &AbsolutePath) -> Result<String, ApplyError> {
     let Ok(real) = std::fs::canonicalize(path.as_str()) else {
-        return Ok(());
+        return Ok(path.as_str().to_string());
     };
-    check_shareable(&AbsolutePath::new(real.to_string_lossy())?)?;
-    Ok(())
+    let real = AbsolutePath::new(real.to_string_lossy())?;
+    check_shareable(&real)?;
+    Ok(real.as_str().to_string())
+}
+
+/// The drive an export is on (its mount point), or `None` if it's on the
+/// system's own. A folder in /run/media whose drive isn't mounted is refused:
+/// exporting it would export the empty folder the drive is mounted on.
+fn drive_of(path: &AbsolutePath, mount_table: &str) -> Result<Option<String>, ApplyError> {
+    let real = real_path(path)?;
+    let drive = mount_point_of(mount_table, &real);
+    if real.starts_with("/run/media/") && !drive.starts_with("/run/media/") {
+        return Err(InvalidValue(format!(
+            "{path} isn't on a mounted drive right now. Mount the drive, then export it."
+        ))
+        .into());
+    }
+    Ok((drive != "/").then_some(drive))
 }
 
 /// Makes sure smb.conf includes netfoo's shares, creating smb.conf if the
@@ -151,6 +174,8 @@ mod tests {
         log: RefCell<Vec<String>>,
         /// Units that exist without netfoo (an admin's, or mounted now).
         units_in_use: Vec<String>,
+        /// /proc/self/mountinfo, as far as the test needs it.
+        mount_table: String,
     }
 
     impl Recorded {
@@ -200,6 +225,9 @@ mod tests {
         }
         fn is_person(&self, user: &UserName) -> bool {
             user.as_str() != "root"
+        }
+        fn mount_table(&self) -> String {
+            self.mount_table.clone()
         }
     }
 
@@ -584,5 +612,40 @@ mod tests {
         let state = State::load(&paths.state).unwrap();
         assert_eq!(state.mounts.len(), 1);
         assert_eq!(state.mounts[0].mount, nfs);
+    }
+
+    #[test]
+    fn exports_on_a_drive_wait_for_it() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let films = NfsExport {
+            path: AbsolutePath::new("/run/media/main/films").unwrap(),
+            read_only: true,
+            clients: vec![NfsClient::new("*").unwrap()],
+        };
+
+        // The drive isn't mounted: refused.
+        let unmounted = Recorded::default();
+        let exports = vec![films.clone()];
+        let result = run(Request::SetNfsExports { exports }, &paths, &unmounted);
+        assert!(matches!(result, Err(ApplyError::Invalid(_))));
+
+        // Mounted: exported only while it is.
+        let mounted = Recorded {
+            mount_table: "62 51 259:0 / /run/media/main rw - ext4 /dev/nvme0n1 rw\n".into(),
+            ..Recorded::default()
+        };
+        run(
+            Request::SetNfsExports {
+                exports: vec![films],
+            },
+            &paths,
+            &mounted,
+        )
+        .unwrap();
+        let text = fs::read_to_string(&paths.nfs_exports).unwrap();
+        assert!(
+            text.contains("/run/media/main/films *(ro,sync,no_subtree_check,mp=/run/media/main)")
+        );
     }
 }
