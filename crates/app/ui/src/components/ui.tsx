@@ -56,6 +56,37 @@ export function Field(props: ParentProps<{ label: string; hint?: string }>) {
   );
 }
 
+/** A choice between a few options, side by side, like SMB / NFS. */
+export function Segmented<T extends string>(props: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  /** What's being chosen, for screen readers. */
+  label: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={props.label} class="inline-flex rounded-md border border-border p-0.5">
+      <For each={props.options}>
+        {(option) => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={props.value === option.value}
+            onClick={() => props.onChange(option.value)}
+            class="rounded px-3 py-1 font-medium"
+            classList={{
+              'bg-accent text-on-accent': props.value === option.value,
+              'text-fg-muted hover:bg-hover': props.value !== option.value,
+            }}
+          >
+            {option.label}
+          </button>
+        )}
+      </For>
+    </div>
+  );
+}
+
 /** A short label beside a name, like a mount's protocol (SMB). */
 export function Tag(props: { children: string }) {
   return (

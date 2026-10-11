@@ -3,10 +3,10 @@
 Mount other machines' shares, and share folders on your network, without editing
 fstab, smb.conf or /etc/exports.
 
-- **Network folders**: type `//nas.lan/media`, sign in, and the share appears at
-  `~/Network/media`. It connects when the folder's first opened, so startup never
-  waits for the NAS (or at startup, if you'd rather). The password is kept where
-  only the system can read it.
+- **Network folders**: type `//nas.lan/media` (SMB) or `nas.lan:/srv/media` (NFS),
+  and the share appears at `~/Network/media`. It connects when the folder's first
+  opened, so startup never waits for the NAS (or at startup, if you'd rather). SMB
+  passwords are kept where only the system can read them.
 - **Samba shares** for Windows, Macs and phones: pick a folder, choose who can
   open it (people on this machine, or anyone), done. Set each person's Samba
   password from the same place.

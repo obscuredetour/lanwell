@@ -5,8 +5,15 @@
 
 pub mod cifs;
 pub mod nfs;
+pub mod nfs_client;
 pub mod samba;
 pub mod systemd;
+
+/// A plain explanation of why a mount failed, from what its mount tool
+/// (mount.cifs or mount.nfs) logged. `None` if there's nothing to go on.
+pub fn explain_mount_failure(log: &str) -> Option<String> {
+    cifs::explain_mount_failure(log).or_else(|| nfs_client::explain_mount_failure(log))
+}
 
 use std::path::{Path, PathBuf};
 

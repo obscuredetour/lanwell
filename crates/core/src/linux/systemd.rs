@@ -1,4 +1,4 @@
-//! Mounts as systemd units, and the credentials file they sign in with.
+//! Mounts as systemd units, and the credentials file an SMB mount signs in with.
 //!
 //! Each mount is a `.mount` unit, plus an `.automount` unit when it mounts on
 //! first access. They're named after the mount point, the way systemd
@@ -7,7 +7,7 @@
 //! fstab entries, without touching fstab.
 
 use crate::linux::GENERATED_HEADER;
-use crate::mount::{ManagedMount, MountLogin, MountWhen};
+use crate::mount::{ManagedMount, MountWhen, NfsVersion, Owner, RemoteShare, SmbLogin, SmbVersion};
 use crate::names::AbsolutePath;
 use crate::request::Secret;
 
@@ -53,29 +53,22 @@ fn escape_path(path: &str) -> String {
 }
 
 /// The `.mount` unit. `credentials` is the path of its credentials file, used
-/// when it signs in as a user.
+/// when an SMB mount signs in as a user.
 pub fn render_mount_unit(managed: &ManagedMount, credentials: &str) -> String {
     let mount = &managed.mount;
-    let mut options = vec![match &mount.login {
-        MountLogin::Guest => "guest".to_string(),
-        MountLogin::User { .. } => format!("credentials={credentials}"),
-    }];
-    // Every file appears as the person who added the mount, and only theirs to
-    // read. force*: even if the server sends its own owners (Unix extensions).
-    options.push(format!(
-        "uid={},gid={},forceuid,forcegid",
-        managed.owner.uid, managed.owner.gid
-    ));
-    options.push("file_mode=0600,dir_mode=0700,iocharset=utf8".into());
-    // The server decides what's on the share, so nothing on it may act as
-    // another user (setuid) or as a device.
-    options.push("nosuid,nodev".into());
+    let (fs_type, mut options) = match &mount.share {
+        RemoteShare::Smb { login, version, .. } => (
+            "cifs",
+            smb_options(login, *version, managed.owner, credentials),
+        ),
+        RemoteShare::Nfs { version, .. } => ("nfs", nfs_options(*version)),
+    };
     if mount.read_only {
         options.push("ro".into());
     }
-    if let Some(version) = mount.version.option() {
-        options.push(format!("vers={version}"));
-    }
+    // The server decides what's on the share, so nothing on it may act as
+    // another user (setuid) or as a device.
+    options.push("nosuid,nodev".into());
 
     let install = match mount.when {
         MountWhen::Startup => "\n[Install]\nWantedBy=remote-fs.target\n",
@@ -93,14 +86,48 @@ pub fn render_mount_unit(managed: &ManagedMount, credentials: &str) -> String {
          [Mount]\n\
          What={address}\n\
          Where={where_}\n\
-         Type=cifs\n\
+         Type={fs_type}\n\
          Options={options}\n\
          TimeoutSec={MOUNT_TIMEOUT_SECONDS}\n\
          {install}",
-        address = unit_value(mount.address.as_str()),
+        address = unit_value(mount.share.address()),
         where_ = unit_value(mount.mount_point.as_str()),
         options = unit_value(&options.join(",")),
     )
+}
+
+/// mount.cifs's options: how to sign in, whose the files are, and the version.
+fn smb_options(
+    login: &SmbLogin,
+    version: SmbVersion,
+    owner: Owner,
+    credentials: &str,
+) -> Vec<String> {
+    let mut options = vec![match login {
+        SmbLogin::Guest => "guest".to_string(),
+        SmbLogin::User { .. } => format!("credentials={credentials}"),
+    }];
+    // Every file appears as the person who added the mount, and only theirs to
+    // read. force*: even if the server sends its own owners (Unix extensions).
+    options.push(format!(
+        "uid={},gid={},forceuid,forcegid",
+        owner.uid, owner.gid
+    ));
+    options.push("file_mode=0600,dir_mode=0700,iocharset=utf8".into());
+    if let Some(version) = version.option() {
+        options.push(format!("vers={version}"));
+    }
+    options
+}
+
+/// mount.nfs's options. NFS has no login or owner options: the server
+/// decides who may mount, and files keep the server's user IDs.
+fn nfs_options(version: NfsVersion) -> Vec<String> {
+    version
+        .option()
+        .map(|version| format!("vers={version}"))
+        .into_iter()
+        .collect()
 }
 
 /// The `.automount` unit, for [`MountWhen::FirstAccess`]: it mounts the share
@@ -116,7 +143,7 @@ pub fn render_automount_unit(managed: &ManagedMount) -> String {
          \n\
          [Install]\n\
          WantedBy=remote-fs.target\n",
-        address = unit_value(managed.mount.address.as_str()),
+        address = unit_value(managed.mount.share.address()),
         where_ = unit_value(managed.mount.mount_point.as_str()),
     )
 }
@@ -128,8 +155,8 @@ fn unit_value(value: &str) -> String {
 
 /// The credentials file mount.cifs reads (only root may read it). `None` for
 /// a guest login, which needs none.
-pub fn render_credentials(login: &MountLogin, password: &Secret) -> Option<String> {
-    let MountLogin::User { username, domain } = login else {
+pub fn render_credentials(login: &SmbLogin, password: &Secret) -> Option<String> {
+    let SmbLogin::User { username, domain } = login else {
         return None;
     };
     let mut out = format!("username={username}\npassword={}\n", password.expose());
@@ -142,18 +169,27 @@ pub fn render_credentials(login: &MountLogin, password: &Secret) -> Option<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mount::{Owner, SmbAddress, SmbMount, SmbVersion};
+    use crate::mount::{Mount, NfsAddress, SmbAddress};
     use crate::names::RemoteName;
 
-    fn mount(when: MountWhen, login: MountLogin) -> ManagedMount {
-        ManagedMount {
-            mount: SmbMount {
+    fn smb_mount(when: MountWhen, login: SmbLogin, version: SmbVersion) -> ManagedMount {
+        managed(
+            when,
+            RemoteShare::Smb {
                 address: SmbAddress::new("//nas.lan/media").unwrap(),
-                mount_point: AbsolutePath::new("/home/alice/Network/media").unwrap(),
                 login,
+                version,
+            },
+        )
+    }
+
+    fn managed(when: MountWhen, share: RemoteShare) -> ManagedMount {
+        ManagedMount {
+            mount: Mount {
+                share,
+                mount_point: AbsolutePath::new("/home/alice/Network/media").unwrap(),
                 when,
                 read_only: false,
-                version: SmbVersion::Automatic,
             },
             owner: Owner {
                 uid: 1000,
@@ -162,8 +198,8 @@ mod tests {
         }
     }
 
-    fn alice() -> MountLogin {
-        MountLogin::User {
+    fn alice() -> SmbLogin {
+        SmbLogin::User {
             username: RemoteName::new("alice").unwrap(),
             domain: None,
         }
@@ -186,11 +222,12 @@ mod tests {
     }
 
     #[test]
-    fn mounting_on_first_access() {
-        let managed = mount(MountWhen::FirstAccess, alice());
+    fn smb_on_first_access() {
+        let managed = smb_mount(MountWhen::FirstAccess, alice(), SmbVersion::Automatic);
         let unit = render_mount_unit(&managed, "/etc/netfoo/credentials/home-alice-Network-media");
         assert!(unit.contains("What=//nas.lan/media\n"));
         assert!(unit.contains("Where=/home/alice/Network/media\n"));
+        assert!(unit.contains("Type=cifs\n"));
         assert!(unit.contains(
             "Options=credentials=/etc/netfoo/credentials/home-alice-Network-media,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,nosuid,nodev\n"
         ));
@@ -203,25 +240,46 @@ mod tests {
     }
 
     #[test]
-    fn mounting_at_startup_as_guest() {
-        let mut managed = mount(MountWhen::Startup, MountLogin::Guest);
+    fn smb_at_startup_as_guest() {
+        let mut managed = smb_mount(MountWhen::Startup, SmbLogin::Guest, SmbVersion::V3_0);
         managed.mount.read_only = true;
-        managed.mount.version = SmbVersion::V3_0;
         let unit = render_mount_unit(&managed, "unused");
-        assert!(unit.contains("Options=guest,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,nosuid,nodev,ro,vers=3.0\n"));
+        assert!(unit.contains("Options=guest,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,vers=3.0,ro,nosuid,nodev\n"));
         assert!(unit.ends_with("[Install]\nWantedBy=remote-fs.target\n"));
     }
 
     #[test]
+    fn nfs() {
+        let share = |version| RemoteShare::Nfs {
+            address: NfsAddress::new("nas.lan:/srv/media").unwrap(),
+            version,
+        };
+        let unit = render_mount_unit(
+            &managed(MountWhen::FirstAccess, share(NfsVersion::Automatic)),
+            "",
+        );
+        assert!(unit.contains("What=nas.lan:/srv/media\n"));
+        assert!(unit.contains("Type=nfs\n"));
+        assert!(unit.contains("Options=nosuid,nodev\n"));
+
+        let unit = render_mount_unit(&managed(MountWhen::FirstAccess, share(NfsVersion::V3)), "");
+        assert!(unit.contains("Options=vers=3,nosuid,nodev\n"));
+    }
+
+    #[test]
     fn percent_signs_are_escaped() {
-        let mut managed = mount(MountWhen::FirstAccess, MountLogin::Guest);
-        managed.mount.address = SmbAddress::new("//nas.lan/100%").unwrap();
-        assert!(render_mount_unit(&managed, "").contains("What=//nas.lan/100%%\n"));
+        let share = RemoteShare::Smb {
+            address: SmbAddress::new("//nas.lan/100%").unwrap(),
+            login: SmbLogin::Guest,
+            version: SmbVersion::Automatic,
+        };
+        let unit = render_mount_unit(&managed(MountWhen::FirstAccess, share), "");
+        assert!(unit.contains("What=//nas.lan/100%%\n"));
     }
 
     #[test]
     fn credentials() {
-        let login = MountLogin::User {
+        let login = SmbLogin::User {
             username: RemoteName::new("Alice").unwrap(),
             domain: Some(RemoteName::new("HOME").unwrap()),
         };
@@ -230,7 +288,7 @@ mod tests {
             "username=Alice\npassword=pw\ndomain=HOME\n"
         );
         assert_eq!(
-            render_credentials(&MountLogin::Guest, &Secret("pw".into())),
+            render_credentials(&SmbLogin::Guest, &Secret("pw".into())),
             None
         );
     }

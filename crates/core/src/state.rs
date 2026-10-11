@@ -14,7 +14,10 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::mount::ManagedMount;
+use crate::mount::{
+    ManagedMount, Mount, MountWhen, Owner, RemoteShare, SmbAddress, SmbLogin, SmbVersion,
+};
+use crate::names::AbsolutePath;
 use crate::share::{NfsExport, SmbShare};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,7 +26,8 @@ use crate::share::{NfsExport, SmbShare};
 pub struct State {
     pub smb_shares: Vec<SmbShare>,
     pub nfs_exports: Vec<NfsExport>,
-    pub smb_mounts: Vec<ManagedMount>,
+    /// Shares on other machines mounted here, SMB and NFS.
+    pub mounts: Vec<ManagedMount>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -35,6 +39,40 @@ pub enum StateError {
         path: String,
         source: serde_json::Error,
     },
+}
+
+/// A mount as the first builds saved it, before NFS mounts: SMB only, under
+/// `smbMounts`. [`State::load`] converts them, and the helper's next save
+/// writes the new form. Remove once no such state files are left (they're
+/// all from unreleased 0.1.0 builds).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LegacySmbMount {
+    address: SmbAddress,
+    mount_point: AbsolutePath,
+    login: SmbLogin,
+    when: MountWhen,
+    read_only: bool,
+    version: SmbVersion,
+    owner: Owner,
+}
+
+impl From<LegacySmbMount> for ManagedMount {
+    fn from(old: LegacySmbMount) -> Self {
+        ManagedMount {
+            mount: Mount {
+                share: RemoteShare::Smb {
+                    address: old.address,
+                    login: old.login,
+                    version: old.version,
+                },
+                mount_point: old.mount_point,
+                when: old.when,
+                read_only: old.read_only,
+            },
+            owner: old.owner,
+        }
+    }
 }
 
 impl State {
@@ -50,10 +88,21 @@ impl State {
                 });
             }
         };
-        serde_json::from_str(&text).map_err(|source| StateError::Parse {
+        let parse_error = |source| StateError::Parse {
             path: path.display().to_string(),
             source,
-        })
+        };
+
+        let mut value: serde_json::Value = serde_json::from_str(&text).map_err(parse_error)?;
+        let legacy = value
+            .as_object_mut()
+            .and_then(|fields| fields.remove("smbMounts"));
+        let mut state: State = serde_json::from_value(value).map_err(parse_error)?;
+        if let Some(legacy) = legacy {
+            let old: Vec<LegacySmbMount> = serde_json::from_value(legacy).map_err(parse_error)?;
+            state.mounts.extend(old.into_iter().map(ManagedMount::from));
+        }
+        Ok(state)
     }
 
     pub fn to_json(&self) -> String {
@@ -87,9 +136,34 @@ mod tests {
                 access: SmbAccess::Guest,
             }],
             nfs_exports: vec![],
-            smb_mounts: vec![],
+            mounts: vec![],
         };
         std::fs::write(&path, state.to_json()).unwrap();
         assert_eq!(State::load(&path).unwrap(), state);
+    }
+
+    #[test]
+    fn mounts_saved_before_nfs_are_converted() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("state.json");
+        let old = r#"{
+            "smbShares": [],
+            "nfsExports": [],
+            "smbMounts": [{
+                "address": "//nas.lan/media",
+                "mountPoint": "/home/alice/Network/media",
+                "login": { "kind": "user", "username": "alice", "domain": null },
+                "when": "firstAccess",
+                "readOnly": false,
+                "version": "automatic",
+                "owner": { "uid": 1000, "gid": 1000 }
+            }]
+        }"#;
+        std::fs::write(&path, old).unwrap();
+
+        let state = State::load(&path).unwrap();
+        assert_eq!(state.mounts.len(), 1);
+        assert_eq!(state.mounts[0].mount.share.address(), "//nas.lan/media");
+        assert!(!state.to_json().contains("smbMounts"));
     }
 }

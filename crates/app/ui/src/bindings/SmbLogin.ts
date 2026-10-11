@@ -5,7 +5,7 @@ import type { RemoteName } from "./RemoteName";
  * How to sign in to the share. The password isn't part of this: it's sent
  * with the request and kept only in a file only root can read.
  */
-export type MountLogin = { "kind": "guest" } | { "kind": "user", username: RemoteName, 
+export type SmbLogin = { "kind": "guest" } | { "kind": "user", username: RemoteName, 
 /**
  * The Windows domain or workgroup, if the server wants one.
  */

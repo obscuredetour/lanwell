@@ -22,6 +22,19 @@ cifsInstalled: boolean,
  */
 smbclientInstalled: boolean, 
 /**
+ * The NFS client (`mount.nfs`) is installed, which mounting NFS exports needs.
+ */
+nfsClientInstalled: boolean, 
+/**
+ * `showmount` is installed, which listing a server's NFS exports needs.
+ */
+showmountInstalled: boolean, 
+/**
+ * This user's ID. An NFS mount's files are theirs only where the server
+ * gives them the same one.
+ */
+userId: number | null, 
+/**
  * The user's home folder, where mounts go by default (`~/Network/<share>`).
  */
 homeDir: string | null, };

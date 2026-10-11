@@ -9,7 +9,7 @@
 //!   config file goes through one of these types, so the helper never writes
 //!   a newline or a `[` it didn't mean to.
 //! - [`share`]: Samba shares and NFS exports, as netfoo models them.
-//! - [`mount`]: other machines' shares, mounted here.
+//! - [`mount`]: other machines' shares (SMB or NFS), mounted here.
 //! - [`state`]: everything netfoo manages, saved as one JSON file. The config
 //!   files are generated from it, never parsed back.
 //! - [`request`]: what the app asks the helper to do.
@@ -27,8 +27,8 @@ pub mod state;
 pub mod system;
 
 pub use mount::{
-    ManagedMount, MountActivity, MountLogin, MountStatus, MountWhen, Owner, SmbAddress, SmbMount,
-    SmbVersion,
+    ManagedMount, Mount, MountActivity, MountStatus, MountWhen, NfsAddress, NfsVersion, Owner,
+    RemoteShare, SmbAddress, SmbLogin, SmbVersion,
 };
 pub use names::{AbsolutePath, InvalidValue, NfsClient, RemoteName, ShareName, UserName};
 pub use request::{Request, Secret};

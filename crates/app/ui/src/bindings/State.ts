@@ -3,4 +3,8 @@ import type { ManagedMount } from "./ManagedMount";
 import type { NfsExport } from "./NfsExport";
 import type { SmbShare } from "./SmbShare";
 
-export type State = { smbShares: Array<SmbShare>, nfsExports: Array<NfsExport>, smbMounts: Array<ManagedMount>, };
+export type State = { smbShares: Array<SmbShare>, nfsExports: Array<NfsExport>, 
+/**
+ * Shares on other machines mounted here, SMB and NFS.
+ */
+mounts: Array<ManagedMount>, };

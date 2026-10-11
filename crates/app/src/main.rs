@@ -23,6 +23,7 @@ fn main() {
             commands::apply,
             commands::mount_statuses,
             commands::list_server_shares,
+            commands::list_server_exports,
             commands::open_mount,
         ])
         .run(tauri::generate_context!())

@@ -109,8 +109,14 @@ on every change, and say so at the top.
 
 ## Mounting other machines' shares
 
-A mount is a systemd `.mount` unit (`Type=cifs`), like an fstab line with
-`x-systemd.automount`, without touching fstab. When it connects is the
+A mount is an SMB share (`//nas.lan/media`) or an NFS export
+(`nas.lan:/srv/media`), as a systemd `.mount` unit (`Type=cifs` or
+`Type=nfs`), like an fstab line with `x-systemd.automount`, without touching
+fstab. The protocols differ in two ways that show in the UI: SMB signs in
+(a user name and password, or as a guest), while NFS has no sign-in (the
+server's export list decides which machines may mount); and an SMB mount's
+files appear as the person who added it, while an NFS mount's keep the
+server's user IDs. When it connects is the
 person's choice:
 
 - **When first opened** (the default): an `.automount` unit is enabled, and
@@ -121,9 +127,9 @@ person's choice:
   Startup waits for the server, up to `TimeoutSec=30`, every time it's off;
   the UI says so before it's chosen.
 
-Files appear as the person who added the mount, readable only by them
-(`uid`/`gid` with `forceuid`/`forcegid`, modes 0600/0700); the helper takes
-the account from D-Bus, not from the request. Mounts are `nosuid,nodev`: the
+An SMB mount's files appear as the person who added it, readable only by
+them (`uid`/`gid` with `forceuid`/`forcegid`, modes 0600/0700); the helper
+takes the account from D-Bus, not from the request. Mounts are `nosuid,nodev`: the
 server decides what's on a share, so nothing on it may run as another user.
 Mounts default to `~/Network/<share>`; the app creates a folder in the
 person's home itself, so it's theirs.
@@ -133,13 +139,14 @@ a symbolic link in it, and folders with files in them. It only replaces or
 removes mounts it recorded in its state: a folder with any other mount (an
 admin's unit, an fstab line, anything mounted now) is left alone.
 
-When mounting fails, the helper reads what mount.cifs logged for that
-attempt and explains it ("The server didn't accept the user name or
+When mounting fails, the helper reads what mount.cifs or mount.nfs logged
+for that attempt and explains it ("The server didn't accept the user name or
 password" for `mount error(13)`). The mount stays saved, so it can be fixed
 and tried again. The app shows each mount's state (connected, connects when
 opened, couldn't connect) by asking systemd, without root, and can list a
-server's shares with `smbclient` (its password passed in `$PASSWD`, not on
-the command line).
+server's SMB shares with `smbclient` (its password passed in `$PASSWD`, not
+on the command line) and its NFS exports with `showmount` (which only NFS 3
+servers answer; for NFS 4-only ones, the path is typed).
 
 ## macOS (later, if wanted)
 
@@ -159,17 +166,9 @@ The core and UI carry over; the helper and the config rendering don't.
 
 ## Roadmap
 
-1. **NFS mounts**, tested against netfoo's own NFS export (export a folder to
-   `127.0.0.1`, mount `localhost:/that/folder`), or a VM:
-   - Connect to a share gets an SMB / NFS switcher. Only SMB has Sign in;
-     NFS shows instead that access is decided by the server's export list,
-     and that files keep the server's user IDs (a Mac's start at 501, Linux's
-     at 1000, so a Mac export may need `-mapall`).
-   - More options: an NFS version (Automatic, 4.2, 4.1, 3) in place of the
-     SMB one; folder, when to connect and read only stay.
-   - Units with `Type=nfs`, the same `nosuid,nodev` and ownership rules, and
-     no credentials file.
-   - Each mount in the list is tagged with its protocol (SMB is today).
+1. **Test NFS mounts for real** (built, not yet tried against a server):
+   export a folder from netfoo's NFS page to `127.0.0.1`, start
+   `nfs-server`, and mount `localhost:/that/folder`; or use a VM.
 2. **More mounting**: find servers on the network (mDNS, WS-Discovery);
    edit a mount in place (today: remove and add it again); folders inside a
    share (`//nas.lan/media/films`).
@@ -207,5 +206,9 @@ The core and UI carry over; the helper and the config rendering don't.
   didn't come from a package (a development build, a downloaded bundle) can
   be set up with one button and the system's password prompt. One install
   path, `netfoo-helper install`, serves the button and the dev script.
+- **2026-10-11: One mount type for both protocols.** A mount is a folder
+  plus a remote share, SMB or NFS, so ownership checks, units, status and
+  hardening are written once. State files from before (`smbMounts`) are
+  converted when they're read.
 - **2026-10-11: Sharing before mounting** for the first slice, because it
   exercises every part of the helper with the fewest moving parts.

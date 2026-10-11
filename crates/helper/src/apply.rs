@@ -78,10 +78,10 @@ pub fn apply(
             }
             services.set_smb_password(user, password)?;
         }
-        Request::SetSmbMount { mount, password } => {
+        Request::SetMount { mount, password } => {
             mounts::set(mount, password.as_ref(), caller, paths, services)?;
         }
-        Request::RemoveSmbMount { mount_point } => {
+        Request::RemoveMount { mount_point } => {
             mounts::remove(mount_point, paths, services)?;
         }
     }
@@ -133,8 +133,9 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
 
     use netfoo_core::{
-        AbsolutePath, MountLogin, MountWhen, NfsClient, NfsExport, RemoteName, Secret, ShareName,
-        SmbAccess, SmbAddress, SmbMount, SmbShare, SmbVersion, UserName,
+        AbsolutePath, Mount, MountWhen, NfsAddress, NfsClient, NfsExport, NfsVersion, RemoteName,
+        RemoteShare, Secret, ShareName, SmbAccess, SmbAddress, SmbLogin, SmbShare, SmbVersion,
+        UserName,
     };
 
     use super::*;
@@ -216,17 +217,29 @@ mod tests {
         }
     }
 
-    fn nas_media(when: MountWhen) -> SmbMount {
-        SmbMount {
-            address: SmbAddress::new("//nas.lan/media").unwrap(),
-            mount_point: AbsolutePath::new("/home/alice/Network/media").unwrap(),
-            login: MountLogin::User {
-                username: RemoteName::new("alice").unwrap(),
-                domain: None,
+    fn nas_media(when: MountWhen) -> Mount {
+        Mount {
+            share: RemoteShare::Smb {
+                address: SmbAddress::new("//nas.lan/media").unwrap(),
+                login: SmbLogin::User {
+                    username: RemoteName::new("alice").unwrap(),
+                    domain: None,
+                },
+                version: SmbVersion::Automatic,
             },
+            mount_point: AbsolutePath::new("/home/alice/Network/media").unwrap(),
             when,
             read_only: false,
-            version: SmbVersion::Automatic,
+        }
+    }
+
+    fn nfs_media() -> Mount {
+        Mount {
+            share: RemoteShare::Nfs {
+                address: NfsAddress::new("nas.lan:/srv/media").unwrap(),
+                version: NfsVersion::Automatic,
+            },
+            ..nas_media(MountWhen::FirstAccess)
         }
     }
 
@@ -320,7 +333,7 @@ mod tests {
         let services = Recorded::default();
 
         let mount = nas_media(MountWhen::FirstAccess);
-        let request = Request::SetSmbMount {
+        let request = Request::SetMount {
             mount: mount.clone(),
             password: password(),
         };
@@ -350,9 +363,9 @@ mod tests {
         );
 
         let state = State::load(&paths.state).unwrap();
-        assert_eq!(state.smb_mounts.len(), 1);
-        assert_eq!(state.smb_mounts[0].mount, mount);
-        assert_eq!(state.smb_mounts[0].owner, ALICE);
+        assert_eq!(state.mounts.len(), 1);
+        assert_eq!(state.mounts[0].mount, mount);
+        assert_eq!(state.mounts[0].owner, ALICE);
         // No password in the state file, which everyone can read.
         assert!(
             !fs::read_to_string(&paths.state)
@@ -377,7 +390,7 @@ mod tests {
         let paths = Paths::under(root.path());
         let services = Recorded::default();
         let first_access = nas_media(MountWhen::FirstAccess);
-        let request = Request::SetSmbMount {
+        let request = Request::SetMount {
             mount: first_access,
             password: password(),
         };
@@ -386,7 +399,7 @@ mod tests {
         // No password: the saved one is kept.
         let startup = nas_media(MountWhen::Startup);
         run(
-            Request::SetSmbMount {
+            Request::SetMount {
                 mount: startup,
                 password: None,
             },
@@ -407,7 +420,7 @@ mod tests {
                 .unwrap()
                 .contains("password=hunter2")
         );
-        assert_eq!(State::load(&paths.state).unwrap().smb_mounts.len(), 1);
+        assert_eq!(State::load(&paths.state).unwrap().mounts.len(), 1);
         assert_eq!(
             services.log().last().unwrap(),
             "enable home-alice-Network-media.mount"
@@ -420,7 +433,7 @@ mod tests {
         let paths = Paths::under(root.path());
         let mount = nas_media(MountWhen::FirstAccess);
         let result = run(
-            Request::SetSmbMount {
+            Request::SetMount {
                 mount,
                 password: None,
             },
@@ -438,7 +451,7 @@ mod tests {
         mount.mount_point = AbsolutePath::new("/etc").unwrap();
         let services = Recorded::default();
         let result = run(
-            Request::SetSmbMount {
+            Request::SetMount {
                 mount,
                 password: password(),
             },
@@ -457,7 +470,7 @@ mod tests {
         let mount = nas_media(MountWhen::FirstAccess);
         let mount_point = mount.mount_point.clone();
         run(
-            Request::SetSmbMount {
+            Request::SetMount {
                 mount,
                 password: password(),
             },
@@ -466,11 +479,11 @@ mod tests {
         )
         .unwrap();
 
-        run(Request::RemoveSmbMount { mount_point }, &paths, &services).unwrap();
+        run(Request::RemoveMount { mount_point }, &paths, &services).unwrap();
 
         assert_eq!(fs::read_dir(&paths.systemd_units).unwrap().count(), 0);
         assert!(!paths.credentials.join("home-alice-Network-media").exists());
-        assert!(State::load(&paths.state).unwrap().smb_mounts.is_empty());
+        assert!(State::load(&paths.state).unwrap().mounts.is_empty());
     }
 
     #[test]
@@ -484,7 +497,7 @@ mod tests {
 
         let mount = nas_media(MountWhen::FirstAccess);
         let mount_point = mount.mount_point.clone();
-        let request = Request::SetSmbMount {
+        let request = Request::SetMount {
             mount,
             password: password(),
         };
@@ -493,7 +506,7 @@ mod tests {
             Err(ApplyError::MountPoint(_))
         ));
 
-        let result = run(Request::RemoveSmbMount { mount_point }, &paths, &services);
+        let result = run(Request::RemoveMount { mount_point }, &paths, &services);
         assert!(matches!(result, Err(ApplyError::Invalid(_))));
         // Nothing stopped, nothing written.
         assert!(services.log().is_empty());
@@ -534,5 +547,42 @@ mod tests {
             &Recorded::default(),
         );
         assert!(matches!(result, Err(ApplyError::Invalid(_))));
+    }
+
+    #[test]
+    fn mounting_nfs_needs_no_credentials() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+
+        // First SMB, with a saved password; then NFS on the same folder.
+        let smb = nas_media(MountWhen::FirstAccess);
+        run(
+            Request::SetMount {
+                mount: smb,
+                password: password(),
+            },
+            &paths,
+            &services,
+        )
+        .unwrap();
+        let nfs = nfs_media();
+        run(
+            Request::SetMount {
+                mount: nfs.clone(),
+                password: None,
+            },
+            &paths,
+            &services,
+        )
+        .unwrap();
+
+        let unit = fs::read_to_string(paths.systemd_units.join("home-alice-Network-media.mount"));
+        assert!(unit.unwrap().contains("Type=nfs\n"));
+        // The SMB password isn't kept once nothing needs it.
+        assert!(!paths.credentials.join("home-alice-Network-media").exists());
+        let state = State::load(&paths.state).unwrap();
+        assert_eq!(state.mounts.len(), 1);
+        assert_eq!(state.mounts[0].mount, nfs);
     }
 }

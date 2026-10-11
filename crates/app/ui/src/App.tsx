@@ -5,7 +5,7 @@ import { helperStatus, loadState, messageOf, systemInfo } from './api';
 import { FolderOpen, HardDrive, Network } from './icons';
 import { HelperBanner } from './components/HelperBanner';
 import { HelperCard } from './components/HelperCard';
-import { MountsPage } from './components/MountsPage';
+import { MountsPage } from './components/mounts/MountsPage';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
 import { Notice } from './components/ui';
@@ -64,7 +64,7 @@ export function App() {
         <Show when={info() && state()}>
           <Switch>
             <Match when={page() === 'mounts'}>
-              <MountsPage info={info()!} mounts={state()!.smbMounts} onChanged={refetch} />
+              <MountsPage info={info()!} mounts={state()!.mounts} onChanged={refetch} />
             </Match>
             <Match when={page() === 'samba'}>
               <SambaPage info={info()!} shares={state()!.smbShares} onChanged={refetch} />

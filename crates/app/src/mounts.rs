@@ -6,7 +6,8 @@ use std::io::Read;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use netfoo_core::linux::cifs::{explain_list_failure, parse_share_list};
+use netfoo_core::linux::cifs::{self, parse_share_list};
+use netfoo_core::linux::nfs_client::{self, parse_export_list};
 use netfoo_core::linux::systemd::UnitNames;
 use netfoo_core::mount::check_host;
 use netfoo_core::system::find_program;
@@ -81,7 +82,29 @@ pub fn list_shares(
     if succeeded {
         Ok(parse_share_list(&output))
     } else {
-        Err(explain_list_failure(&output))
+        Err(cifs::explain_list_failure(&output))
+    }
+}
+
+/// The folders an NFS server exports. Asks its mount service (NFS 3's), so a
+/// server that only speaks NFS 4 can't answer; the error says to type the path.
+pub fn list_exports(host: &str) -> Result<Vec<String>, String> {
+    check_host(host).map_err(|e| e.to_string())?;
+    let showmount = find_program("showmount")
+        .ok_or("Listing a server's NFS folders needs showmount (part of nfs-utils).")?;
+
+    let mut command = Command::new(showmount);
+    command.args(["--exports", host]);
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let (succeeded, output) = run_with_timeout(command, LIST_TIMEOUT)?;
+    if succeeded {
+        Ok(parse_export_list(&output))
+    } else {
+        Err(nfs_client::explain_list_failure(&output))
     }
 }
 

@@ -27,6 +27,13 @@ pub struct SystemInfo {
     pub cifs_installed: bool,
     /// Samba's client (`smbclient`) is installed, which listing a server's shares needs.
     pub smbclient_installed: bool,
+    /// The NFS client (`mount.nfs`) is installed, which mounting NFS exports needs.
+    pub nfs_client_installed: bool,
+    /// `showmount` is installed, which listing a server's NFS exports needs.
+    pub showmount_installed: bool,
+    /// This user's ID. An NFS mount's files are theirs only where the server
+    /// gives them the same one.
+    pub user_id: Option<u32>,
     /// The user's home folder, where mounts go by default (`~/Network/<share>`).
     pub home_dir: Option<String>,
 }
@@ -46,6 +53,9 @@ impl SystemInfo {
             nfs_server_installed: find_program("exportfs").is_some(),
             cifs_installed: find_program("mount.cifs").is_some(),
             smbclient_installed: find_program("smbclient").is_some(),
+            nfs_client_installed: find_program("mount.nfs").is_some(),
+            showmount_installed: find_program("showmount").is_some(),
+            user_id: user_id(),
             home_dir: std::env::var("HOME").ok(),
         }
     }
@@ -112,6 +122,19 @@ fn same_contents(a: &Path, b: &Path) -> bool {
         return false;
     }
     matches!((std::fs::read(a), std::fs::read(b)), (Ok(a), Ok(b)) if a == b)
+}
+
+/// The user this process runs as (who owns /proc/self).
+fn user_id() -> Option<u32> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        std::fs::metadata("/proc/self")
+            .ok()
+            .map(|metadata| metadata.uid())
+    }
+    #[cfg(not(unix))]
+    None
 }
 
 /// Where a system program is installed. Looks in the standard directories

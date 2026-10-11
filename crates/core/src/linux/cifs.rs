@@ -1,5 +1,5 @@
-//! Making sense of the CIFS tools' output: why a mount failed, and which
-//! shares a server has.
+//! Making sense of the CIFS (SMB) client tools' output: why a mount failed,
+//! and which shares a server has.
 
 /// A plain explanation of why mounting failed, from what mount.cifs logged
 /// (the unit's journal). `None` if there's nothing netfoo recognises.

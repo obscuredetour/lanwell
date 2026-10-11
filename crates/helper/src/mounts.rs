@@ -12,7 +12,8 @@ use netfoo_core::linux::systemd::{
 };
 use netfoo_core::mount::check_mount_point;
 use netfoo_core::{
-    AbsolutePath, InvalidValue, ManagedMount, MountLogin, MountWhen, Owner, Secret, SmbMount, State,
+    AbsolutePath, InvalidValue, ManagedMount, Mount, MountWhen, Owner, RemoteShare, Secret,
+    SmbLogin, State,
 };
 
 use crate::apply::{ApplyError, write};
@@ -23,7 +24,7 @@ use crate::services::Services;
 /// and checks it connects. A folder with a mount netfoo didn't set up (its own
 /// unit, an fstab line, anything mounted there now) is refused and left alone.
 pub fn set(
-    mount: &SmbMount,
+    mount: &Mount,
     password: Option<&Secret>,
     owner: Owner,
     paths: &Paths,
@@ -41,7 +42,7 @@ pub fn set(
 
     let mut state = State::load(&paths.state)?;
     let ours = state
-        .smb_mounts
+        .mounts
         .iter()
         .any(|other| other.mount.mount_point == mount.mount_point);
     if ours {
@@ -58,22 +59,7 @@ pub fn set(
         .prepare_mount_point(&mount.mount_point)
         .map_err(ApplyError::MountPoint)?;
 
-    match (&mount.login, password) {
-        (MountLogin::User { .. }, Some(password)) => {
-            if password.expose().chars().any(char::is_control) {
-                return Err(InvalidValue("A password can't contain line breaks.".into()).into());
-            }
-            let text =
-                render_credentials(&mount.login, password).expect("a user login has credentials");
-            write_secret(&paths.credentials, &credentials, &text)?;
-        }
-        (MountLogin::User { .. }, None) if !credentials.exists() => {
-            return Err(InvalidValue("Enter the password for this share.".into()).into());
-        }
-        // Keeps the password saved for this folder.
-        (MountLogin::User { .. }, None) => {}
-        (MountLogin::Guest, _) => remove_if_present(&credentials)?,
-    }
+    save_credentials(&mount.share, password, &paths.credentials, &credentials)?;
 
     write(
         &mount_unit,
@@ -85,9 +71,9 @@ pub fn set(
     }
 
     state
-        .smb_mounts
+        .mounts
         .retain(|other| other.mount.mount_point != mount.mount_point);
-    state.smb_mounts.push(managed);
+    state.mounts.push(managed);
     write(&paths.state, &state.to_json())?;
 
     services.reload_units()?;
@@ -111,7 +97,7 @@ pub fn remove(
 ) -> Result<(), ApplyError> {
     let mut state = State::load(&paths.state)?;
     if !state
-        .smb_mounts
+        .mounts
         .iter()
         .any(|other| &other.mount.mount_point == mount_point)
     {
@@ -130,12 +116,43 @@ pub fn remove(
     }
 
     state
-        .smb_mounts
+        .mounts
         .retain(|other| &other.mount.mount_point != mount_point);
     write(&paths.state, &state.to_json())?;
 
     services.reload_units()?;
     Ok(())
+}
+
+/// Keeps an SMB user login's password where mount.cifs reads it. Any other
+/// mount (a guest, or NFS) needs none, so one left from before is removed.
+fn save_credentials(
+    share: &RemoteShare,
+    password: Option<&Secret>,
+    dir: &Path,
+    path: &Path,
+) -> Result<(), ApplyError> {
+    let login = match share {
+        RemoteShare::Smb {
+            login: login @ SmbLogin::User { .. },
+            ..
+        } => login,
+        _ => return remove_if_present(path),
+    };
+    match password {
+        Some(password) => {
+            if password.expose().chars().any(char::is_control) {
+                return Err(InvalidValue("A password can't contain line breaks.".into()).into());
+            }
+            let text = render_credentials(login, password).expect("a user login has credentials");
+            write_secret(dir, path, &text)
+        }
+        None if !path.exists() => {
+            Err(InvalidValue("Enter the password for this share.".into()).into())
+        }
+        // Keeps the password saved for this folder.
+        None => Ok(()),
+    }
 }
 
 /// Writes a file only root can read, in a folder only root can open.

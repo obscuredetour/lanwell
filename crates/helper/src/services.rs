@@ -9,7 +9,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use netfoo_core::linux::cifs::explain_mount_failure;
+use netfoo_core::linux::explain_mount_failure;
 use netfoo_core::system::find_program;
 use netfoo_core::{AbsolutePath, Secret, UserName};
 
@@ -151,7 +151,7 @@ impl Services for SystemServices {
 }
 
 /// Runs `systemctl`, and if a mount fails, replaces systemd's "see the
-/// journal" with what mount.cifs said there, explained when possible.
+/// journal" with what mount.cifs or mount.nfs said there, explained when possible.
 fn explained(
     unit: &str,
     systemctl: impl FnOnce() -> Result<String, CommandError>,

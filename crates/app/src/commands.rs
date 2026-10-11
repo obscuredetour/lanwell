@@ -84,7 +84,7 @@ pub async fn apply(request: Request) -> Result<(), String> {
 /// so it's theirs (the helper, as root, would make it root's). Elsewhere the
 /// helper makes it.
 fn create_mount_point_at_home(request: &Request) -> Result<(), String> {
-    let Request::SetSmbMount { mount, .. } = request else {
+    let Request::SetMount { mount, .. } = request else {
         return Ok(());
     };
     let Ok(home) = std::env::var("HOME") else {
@@ -101,7 +101,7 @@ fn create_mount_point_at_home(request: &Request) -> Result<(), String> {
 #[tauri::command]
 pub fn mount_statuses() -> Result<Vec<MountStatus>, String> {
     let state = load_state()?;
-    Ok(mounts::statuses(&state.smb_mounts))
+    Ok(mounts::statuses(&state.mounts))
 }
 
 /// The shares on a server, to choose one to mount. Signs in as `username`
@@ -119,13 +119,21 @@ pub async fn list_server_shares(
     .map_err(|e| e.to_string())?
 }
 
+/// The folders an NFS server exports, to choose one to mount.
+#[tauri::command]
+pub async fn list_server_exports(host: String) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || mounts::list_exports(&host))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Opens a mount's folder in the file manager (which mounts it, if it waits
 /// to be opened). Only netfoo's own mounts can be opened this way.
 #[tauri::command]
 pub fn open_mount(app: tauri::AppHandle, mount_point: String) -> Result<(), String> {
     let state = load_state()?;
     if !state
-        .smb_mounts
+        .mounts
         .iter()
         .any(|m| m.mount.mount_point.as_str() == mount_point)
     {

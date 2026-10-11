@@ -7,15 +7,15 @@ import { open } from '@tauri-apps/plugin-dialog';
 
 import type { HelperStatus } from './bindings/HelperStatus';
 import type { ManagedMount } from './bindings/ManagedMount';
+import type { Mount } from './bindings/Mount';
 import type { MountStatus } from './bindings/MountStatus';
 import type { NfsExport } from './bindings/NfsExport';
 import type { Request } from './bindings/Request';
-import type { SmbMount } from './bindings/SmbMount';
 import type { SmbShare } from './bindings/SmbShare';
 import type { State } from './bindings/State';
 import type { SystemInfo } from './bindings/SystemInfo';
 
-export type { HelperStatus, ManagedMount, MountStatus, NfsExport, SmbMount, SmbShare, State, SystemInfo };
+export type { HelperStatus, ManagedMount, Mount, MountStatus, NfsExport, SmbShare, State, SystemInfo };
 
 export const systemInfo = () => invoke<SystemInfo>('system_info');
 
@@ -49,14 +49,14 @@ export const setNfsExports = (exports: NfsExport[]) => apply({ kind: 'setNfsExpo
 export const setSmbPassword = (user: string, password: string) => apply({ kind: 'setSmbPassword', user, password });
 
 /**
- * Mounts a share from another machine (replacing any netfoo mount on the same
- * folder). A new user login needs `password`; null keeps the saved one.
+ * Mounts a share from another machine, SMB or NFS (replacing any netfoo mount
+ * on the same folder). `password` is for an SMB user login: a new one needs
+ * it; null keeps the saved one.
  */
-export const setSmbMount = (mount: SmbMount, password: string | null) =>
-  apply({ kind: 'setSmbMount', mount, password });
+export const setMount = (mount: Mount, password: string | null) => apply({ kind: 'setMount', mount, password });
 
 /** Unmounts the share on `mountPoint` and stops mounting it. The folder stays. */
-export const removeSmbMount = (mountPoint: string) => apply({ kind: 'removeSmbMount', mountPoint });
+export const removeMount = (mountPoint: string) => apply({ kind: 'removeMount', mountPoint });
 
 // Mounts, read without a password.
 
@@ -66,6 +66,9 @@ export const mountStatuses = () => invoke<MountStatus[]>('mount_statuses');
 /** The shares on a server. Signs in as `username` if given, or as a guest. */
 export const listServerShares = (host: string, username: string | null, password: string | null) =>
   invoke<string[]>('list_server_shares', { host, username, password });
+
+/** The folders an NFS server exports. */
+export const listServerExports = (host: string) => invoke<string[]>('list_server_exports', { host });
 
 /** Opens a mount's folder in the file manager (mounting it if needed). */
 export const openMount = (mountPoint: string) => invoke<void>('open_mount', { mountPoint });

@@ -9,7 +9,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::bus::actions;
-use crate::mount::SmbMount;
+use crate::mount::Mount;
 use crate::names::{AbsolutePath, UserName};
 use crate::share::{NfsExport, SmbShare};
 
@@ -29,14 +29,14 @@ pub enum Request {
     /// The user must already have an account on this machine.
     SetSmbPassword { user: UserName, password: Secret },
     /// Mount a share from another machine, replacing any netfoo mount on the
-    /// same folder. `password` is needed for a new user login; leave it out to
-    /// keep the one saved for this folder.
-    SetSmbMount {
-        mount: SmbMount,
+    /// same folder. `password` is for an SMB user login: needed for a new
+    /// one, or left out to keep the one saved for this folder.
+    SetMount {
+        mount: Mount,
         password: Option<Secret>,
     },
     /// Unmount the share on this folder and stop mounting it. The folder stays.
-    RemoveSmbMount { mount_point: AbsolutePath },
+    RemoveMount { mount_point: AbsolutePath },
 }
 
 impl Request {
@@ -45,7 +45,7 @@ impl Request {
         match self {
             Request::SetSmbShares { .. } | Request::SetNfsExports { .. } => actions::MANAGE_SHARES,
             Request::SetSmbPassword { .. } => actions::SET_PASSWORD,
-            Request::SetSmbMount { .. } | Request::RemoveSmbMount { .. } => actions::MANAGE_MOUNTS,
+            Request::SetMount { .. } | Request::RemoveMount { .. } => actions::MANAGE_MOUNTS,
         }
     }
 }
