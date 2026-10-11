@@ -156,6 +156,13 @@ server's SMB shares with `smbclient` (its password passed in `$PASSWD`, not
 on the command line) and its NFS exports with `showmount` (which only NFS 3
 servers answer; for NFS 4-only ones, the path is typed).
 
+**Finding servers.** The app (not the helper: looking needs no root) listens
+for mDNS (Bonjour) announcements of `_smb._tcp` and `_nfs._tcp` for a few
+seconds, with the `mdns-sd` crate, so it doesn't depend on Avahi. Macs, NAS
+boxes, and Linux machines with Avahi announce SMB; Windows PCs don't (they
+use WS-Discovery), and few servers announce NFS, so their addresses are
+typed.
+
 **Editing.** An edit is a `SetMount` for the new settings, with `replaces`
 set to the mount's old folder. If the folder changed, the helper checks the
 new one first, then moves the saved password across and removes the old
@@ -181,26 +188,22 @@ The core and UI carry over; the helper and the config rendering don't.
 
 ## Roadmap
 
-1. **Test NFS mounts for real** (built, not yet tried against a server):
-   export a folder from netfoo's NFS page to `127.0.0.1`, start
-   `nfs-server`, and mount `localhost:/that/folder`; or use a VM.
-2. **More mounting**: find servers on the network (mDNS, WS-Discovery);
-   edit a mount in place (today: remove and add it again); folders inside a
-   share (`//nas.lan/media/films`).
-3. **Running the services**: start and enable Samba/NFS when the first share
+1. **Running the services**: start and enable Samba/NFS when the first share
    is added (today the helper only reloads them if they're already running),
    and open the firewall (firewalld's D-Bus API, or ufw).
-4. **Editing** a share in place (today: remove and add again).
-5. **Share-only users**: a user name and password for a share, separate from
+2. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
+
+3. **Editing** a share in place (today: remove and add again).
+4. **Share-only users**: a user name and password for a share, separate from
    anyone's login, and unable to log in. Files they write are owned by the
    folder's owner (`force user`), so permissions stay as they were.
-6. **Packaging**: AUR first, then deb and rpm, each installing the helper
+5. **Packaging**: AUR first, then deb and rpm, each installing the helper
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
    there, and the root-ownership check above has to come first
    ([issue #1](https://github.com/obscuredetour/netfoo/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
-7. **macOS, later, if people want it.** macOS already shares and mounts SMB
+6. **macOS, later, if people want it.** macOS already shares and mounts SMB
    from its own settings, so netfoo would add little there for a lot of work:
    a signed, notarized helper (see "macOS (later, if wanted)" above). Its
    real gap is NFS exports, which have no GUI. The shared core and per-OS

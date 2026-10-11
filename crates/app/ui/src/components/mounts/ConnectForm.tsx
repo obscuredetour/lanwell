@@ -17,6 +17,7 @@ import type { SmbVersion } from '../../bindings/SmbVersion';
 import { Button, createAction, ErrorText, Field, inputClass, Notice, Segmented } from '../ui';
 import { lastName, parseNfsAddress, parseSmbAddress, tildify } from './addresses';
 import { Browse } from './Browse';
+import { FoundServers } from './FoundServers';
 
 type Protocol = 'smb' | 'nfs';
 
@@ -191,6 +192,13 @@ export function ConnectForm(props: {
           </Notice>
         </Match>
       </Switch>
+
+      <Show when={!props.editing}>
+        <FoundServers
+          protocol={protocol()}
+          onPick={(host) => setAddress(protocol() === 'smb' ? `//${host}/` : `${host}:/`)}
+        />
+      </Show>
 
       <Field
         label="Address"

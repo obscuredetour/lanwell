@@ -118,6 +118,28 @@ pub struct MountStatus {
     pub activity: MountActivity,
 }
 
+/// The protocols netfoo mounts with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub enum Protocol {
+    Smb,
+    Nfs,
+}
+
+/// A server that announced itself on the local network (mDNS / Bonjour).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct FoundServer {
+    /// What it calls itself, like `Prometheus`.
+    pub name: String,
+    /// Its address on the network, like `prometheus.local`.
+    pub host: String,
+    /// What it announced it serves.
+    pub protocols: Vec<Protocol>,
+}
+
 /// Checks a server's name or address, like `nas.lan`, `192.168.1.5` or `[fe80::1]`.
 pub fn check_host(host: &str) -> Result<(), InvalidValue> {
     let allowed = |c: char| c.is_ascii_alphanumeric() || ".-:[]".contains(c);

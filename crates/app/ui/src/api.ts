@@ -5,6 +5,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 
+import type { FoundServer } from './bindings/FoundServer';
 import type { HelperStatus } from './bindings/HelperStatus';
 import type { ManagedMount } from './bindings/ManagedMount';
 import type { Mount } from './bindings/Mount';
@@ -15,7 +16,7 @@ import type { SmbShare } from './bindings/SmbShare';
 import type { State } from './bindings/State';
 import type { SystemInfo } from './bindings/SystemInfo';
 
-export type { HelperStatus, ManagedMount, Mount, MountStatus, NfsExport, SmbShare, State, SystemInfo };
+export type { FoundServer, HelperStatus, ManagedMount, Mount, MountStatus, NfsExport, SmbShare, State, SystemInfo };
 
 export const systemInfo = () => invoke<SystemInfo>('system_info');
 
@@ -68,6 +69,9 @@ export const mountStatuses = () => invoke<MountStatus[]>('mount_statuses');
 /** The shares on a server. Signs in as `username` if given, or as a guest. */
 export const listServerShares = (host: string, username: string | null, password: string | null) =>
   invoke<string[]>('list_server_shares', { host, username, password });
+
+/** File servers that announce themselves on the local network (takes a few seconds). */
+export const findServers = () => invoke<FoundServer[]>('find_servers');
 
 /** The folders an NFS server exports. */
 export const listServerExports = (host: string) => invoke<string[]>('list_server_exports', { host });

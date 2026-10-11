@@ -3,10 +3,10 @@
 //! Errors are returned as messages to show as they are.
 
 use netfoo_core::system::{self, HelperStatus, SystemInfo};
-use netfoo_core::{MountStatus, Request, State};
+use netfoo_core::{FoundServer, MountStatus, Request, State};
 use tauri_plugin_opener::OpenerExt;
 
-use crate::mounts;
+use crate::{discovery, mounts};
 
 /// What's installed, so the UI can explain what's missing.
 #[tauri::command]
@@ -117,6 +117,16 @@ pub async fn list_server_shares(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// File servers that announce themselves on the local network.
+#[tauri::command]
+pub async fn find_servers() -> Result<Vec<FoundServer>, String> {
+    // Long enough for servers to answer; announcements come in within a second or two.
+    let wait = std::time::Duration::from_secs(3);
+    tauri::async_runtime::spawn_blocking(move || discovery::find_servers(wait))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// The folders an NFS server exports, to choose one to mount.

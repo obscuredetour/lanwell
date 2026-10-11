@@ -5,6 +5,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod discovery;
 #[cfg(target_os = "linux")]
 mod helper;
 mod mounts;
@@ -24,6 +25,7 @@ fn main() {
             commands::mount_statuses,
             commands::list_server_shares,
             commands::list_server_exports,
+            commands::find_servers,
             commands::open_mount,
         ])
         .run(tauri::generate_context!())

@@ -27,8 +27,8 @@ pub mod state;
 pub mod system;
 
 pub use mount::{
-    ManagedMount, Mount, MountActivity, MountStatus, MountWhen, NfsAddress, NfsVersion, Owner,
-    RemoteShare, SmbAddress, SmbLogin, SmbVersion,
+    FoundServer, ManagedMount, Mount, MountActivity, MountStatus, MountWhen, NfsAddress,
+    NfsVersion, Owner, Protocol, RemoteShare, SmbAddress, SmbLogin, SmbVersion,
 };
 pub use names::{AbsolutePath, InvalidValue, NfsClient, RemoteName, ShareName, UserName};
 pub use request::{Request, Secret};
