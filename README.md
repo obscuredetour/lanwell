@@ -70,3 +70,9 @@ pnpm --dir crates/app/ui lint
 | `crates/app` | The Tauri app; `ui/` is the Solid front end. |
 | `scripts` | Development tools. |
 | `docs` | Architecture and decisions. |
+
+## License
+
+[MIT](LICENSE). netfoo runs the system's own tools as separate programs (Samba's
+`smbclient` and `smbpasswd`, cifs-utils' `mount.cifs`, nfs-utils' `exportfs`)
+rather than including their code.
