@@ -8,6 +8,10 @@ pub mod samba;
 
 use std::path::{Path, PathBuf};
 
+/// Where the helper is installed: by a package, or by `netfoo-helper install`
+/// (the app's Install button). The D-Bus and systemd files name this path.
+pub const HELPER_PATH: &str = "/usr/lib/netfoo/netfoo-helper";
+
 /// Where everything is on a Linux system. The helper uses [`Paths::system`];
 /// tests point it at a temporary directory.
 #[derive(Debug, Clone)]

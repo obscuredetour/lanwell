@@ -25,6 +25,7 @@ crates/
            reading files; no root; no D-Bus. Everything here is unit-tested.
   helper   netfoo-helper: the only part that runs as root. A system D-Bus service that
            checks each request with polkit, then applies it: writes config, reloads services.
+           `netfoo-helper install` puts it in place (the app's Install button runs it).
     linux/   The D-Bus, systemd and polkit files that install it.
   app      The desktop app (Tauri 2). Thin commands over core; changes go to the helper.
     ui/      Solid + TypeScript + Tailwind v4. Talks to the backend only through api.ts.
@@ -61,6 +62,20 @@ UI (api.ts) ──invoke──▶ app (commands.rs) ──D-Bus: Apply(json)─�
 - Each kind of request has its own polkit action (`io.netfoo.manage-shares`,
   `io.netfoo.set-password`), so an administrator can allow one without the other.
 - Requests are applied one at a time.
+
+## Installing the helper
+
+A package installs the helper and its D-Bus, systemd and polkit files. A
+netfoo that didn't come from one installs them itself: when
+`netfoo-helper --version` (run as the user) is missing or names another
+version, the app offers an Install (or Update) button, which runs
+`pkexec netfoo-helper install` with the helper that sits beside the app's own
+binary. pkexec shows the desktop's password prompt; the helper then copies
+itself to `/usr/lib/netfoo` and writes the files, which are built into it.
+
+pkexec runs that binary as root, so it must come from the same place as the
+app: anyone who could replace it could replace the app too. Once installed,
+the helper D-Bus runs is the root-owned copy.
 
 ## Files netfoo owns (Linux)
 
@@ -102,8 +117,10 @@ The core and UI carry over; the helper and the config rendering don't.
 3. **Editing** a share in place (today: remove and add again).
 4. **Share-only users**: accounts that can open shares but can't log in.
 5. **macOS**, as above.
-6. **Packaging**: AUR first, then deb and rpm. Flatpak and AppImage can't
-   install a system D-Bus service or write to /etc, so they don't fit.
+6. **Packaging**: AUR first, then deb and rpm, each installing the helper
+   itself. A release bundle needs the helper beside the app (a Tauri
+   sidecar) for the Install button; today only `cargo tauri dev` builds it
+   there. Flatpak's sandbox can't run pkexec on the host, so it doesn't fit.
 
 ## Decisions
 
@@ -116,5 +133,9 @@ The core and UI carry over; the helper and the config rendering don't.
 - **2026-10-11: polkit via D-Bus, not pkexec.** pkexec runs a whole program as
   root with arguments the caller chose; a D-Bus service accepts only its typed
   requests and identifies the caller race-free.
+- **2026-10-11: The helper installs itself, with pkexec.** So a netfoo that
+  didn't come from a package (a development build, a downloaded bundle) can
+  be set up with one button and the system's password prompt. One install
+  path, `netfoo-helper install`, serves the button and the dev script.
 - **2026-10-11: Sharing before mounting** for the first slice, because it
   exercises every part of the helper with the fewest moving parts.

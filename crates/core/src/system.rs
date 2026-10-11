@@ -42,6 +42,52 @@ impl SystemInfo {
     }
 }
 
+/// Whether the privileged helper is installed, and whether it's the version
+/// this app was built with (the two are released together).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum HelperStatus {
+    Ready {
+        version: String,
+    },
+    Missing,
+    /// Installed, but a different version (`installed`).
+    Outdated {
+        installed: String,
+    },
+    /// netfoo can't install a helper on this system yet.
+    Unsupported,
+}
+
+impl HelperStatus {
+    /// Asks the installed helper its version (`netfoo-helper --version`, which
+    /// needs no root) and compares it with `expected`.
+    pub fn detect(expected: &str) -> Self {
+        if !cfg!(target_os = "linux") {
+            return Self::Unsupported;
+        }
+        let Ok(output) = std::process::Command::new(crate::linux::HELPER_PATH)
+            .arg("--version")
+            .output()
+        else {
+            return Self::Missing;
+        };
+        // "netfoo-helper 0.1.0"
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let installed = stdout.split_whitespace().last().unwrap_or_default();
+        if installed == expected {
+            Self::Ready {
+                version: installed.to_string(),
+            }
+        } else {
+            Self::Outdated {
+                installed: installed.to_string(),
+            }
+        }
+    }
+}
+
 /// Where a system program is installed. Looks in the standard directories
 /// rather than `PATH`, since `sbin` often isn't on a user's `PATH`.
 pub fn find_program(name: &str) -> Option<std::path::PathBuf> {

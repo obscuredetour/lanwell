@@ -1,8 +1,10 @@
 import type { JSX } from 'solid-js';
 import { createResource, createSignal, Match, Show, Switch } from 'solid-js';
 
-import { loadState, messageOf, systemInfo } from './api';
+import { helperStatus, loadState, messageOf, systemInfo } from './api';
 import { FolderOpen, Network } from './icons';
+import { HelperBanner } from './components/HelperBanner';
+import { HelperCard } from './components/HelperCard';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
 import { Notice } from './components/ui';
@@ -12,6 +14,7 @@ type Page = 'samba' | 'nfs';
 export function App() {
   const [info] = createResource(systemInfo);
   const [state, { refetch }] = createResource(loadState);
+  const [helper, { refetch: refetchHelper }] = createResource(helperStatus);
   const [page, setPage] = createSignal<Page>('samba');
 
   const NavItem = (props: { page: Page; icon: JSX.Element; label: string; detail: string }) => (
@@ -31,7 +34,7 @@ export function App() {
 
   return (
     <div class="flex h-full">
-      <nav class="w-56 shrink-0 space-y-1 border-r border-border bg-panel p-3">
+      <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-border bg-panel p-3">
         <h1 class="px-2.5 pt-1 pb-3 text-lg font-semibold">netfoo</h1>
         <NavItem
           page="samba"
@@ -40,9 +43,13 @@ export function App() {
           detail="For Windows, Macs and phones"
         />
         <NavItem page="nfs" icon={<Network size={18} />} label="NFS exports" detail="For Linux and other Unix" />
+        <div class="mt-auto">
+          <HelperCard status={helper()} onChanged={refetchHelper} />
+        </div>
       </nav>
 
       <main class="flex-1 overflow-y-auto p-6">
+        <HelperBanner status={helper()} onChanged={refetchHelper} />
         <Show when={state.error}>
           <Notice tone="danger">{messageOf(state.error)}</Notice>
         </Show>

@@ -27,14 +27,18 @@ cargo tauri dev
 ```
 
 The app can show what's shared without any setup, but making changes goes
-through the helper, which has to be installed as a system D-Bus service. To
-install a debug build (asks for sudo):
+through the helper, a system D-Bus service. Until it's installed, the app
+shows an **Install helper** button, which asks for an administrator's
+password (with pkexec) and installs the debug build `cargo tauri dev` made.
+After changing the helper, the button changes to **Update helper**, since
+the app sees a different version; to reinstall the same version, or from a
+terminal (asks for sudo):
 
 ```bash
 scripts/install-helper-dev.sh
 ```
 
-Run it again after changing the helper; `--uninstall` removes it.
+`--uninstall` removes it.
 
 ### Checks
 

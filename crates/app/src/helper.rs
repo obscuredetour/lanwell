@@ -1,6 +1,11 @@
-//! Talking to netfoo-helper over the system bus.
+//! netfoo-helper: asking it for changes over the system bus, and installing it.
+
+use std::path::PathBuf;
+use std::process::Command;
 
 use netfoo_core::Request;
+use netfoo_core::linux::HELPER_PATH;
+use netfoo_core::system::find_program;
 use zbus::fdo;
 
 // The proxy macro needs literal names; the test below keeps them in step with
@@ -26,12 +31,66 @@ pub async fn apply(request: &Request) -> Result<(), String> {
     helper.apply(&json).await.map_err(describe)
 }
 
+/// Installs (or updates) the helper that came with this app, as root.
+pub async fn install() -> Result<(), String> {
+    as_root(bundled_helper()?, "install").await
+}
+
+/// Removes the installed helper (which removes itself), as root.
+pub async fn uninstall() -> Result<(), String> {
+    as_root(PathBuf::from(HELPER_PATH), "uninstall").await
+}
+
+/// Runs `helper command` as root. pkexec shows the desktop's own password
+/// prompt for it.
+async fn as_root(helper: PathBuf, command: &'static str) -> Result<(), String> {
+    let pkexec = find_program("pkexec")
+        .ok_or("pkexec isn't installed, so netfoo can't ask for the password it needs.")?;
+
+    // pkexec waits for the password prompt, so it runs off the async runtime.
+    let output = tauri::async_runtime::spawn_blocking(move || {
+        Command::new(pkexec).arg(helper).arg(command).output()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| format!("Couldn't run pkexec: {e}"))?;
+
+    match output.status.code() {
+        Some(0) => Ok(()),
+        // pkexec's own codes: the prompt was dismissed, or the password refused
+        // (or there's no polkit agent to show one).
+        Some(126) => Err("Cancelled.".into()),
+        Some(127) => Err(
+            "The password wasn't accepted, or there's no password prompt \
+                          available on this desktop."
+                .into(),
+        ),
+        _ => Err(String::from_utf8_lossy(&output.stderr).trim().to_string()),
+    }
+}
+
+/// The helper built and shipped with this app: beside the app's own binary
+/// (target/debug in development; a bundle's sidecar when packaged).
+fn bundled_helper() -> Result<PathBuf, String> {
+    let app = std::env::current_exe().map_err(|e| e.to_string())?;
+    let helper = app.with_file_name("netfoo-helper");
+    if helper.is_file() {
+        Ok(helper)
+    } else {
+        Err(format!(
+            "netfoo's helper should be at {}, but it isn't there. \
+             (In development, `cargo tauri dev` builds it; check its output for errors.)",
+            helper.display()
+        ))
+    }
+}
+
 /// A message for the person using netfoo.
 fn describe(error: zbus::Error) -> String {
     match fdo::Error::from(error) {
         fdo::Error::ServiceUnknown(_) => {
             "netfoo's helper isn't installed, so it can't change anything. \
-             (In development, run scripts/install-helper-dev.sh.)"
+             Install it from the banner at the top of the window."
                 .into()
         }
         fdo::Error::AccessDenied(_) => "That change wasn't authorized.".into(),

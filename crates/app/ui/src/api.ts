@@ -5,13 +5,14 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 
+import type { HelperStatus } from './bindings/HelperStatus';
 import type { NfsExport } from './bindings/NfsExport';
 import type { Request } from './bindings/Request';
 import type { SmbShare } from './bindings/SmbShare';
 import type { State } from './bindings/State';
 import type { SystemInfo } from './bindings/SystemInfo';
 
-export type { NfsExport, SmbShare, State, SystemInfo };
+export type { HelperStatus, NfsExport, SmbShare, State, SystemInfo };
 
 export const systemInfo = () => invoke<SystemInfo>('system_info');
 
@@ -20,6 +21,15 @@ export const loadState = () => invoke<State>('load_state');
 
 /** People with accounts on this machine. */
 export const localUsers = () => invoke<string[]>('local_users');
+
+/** Whether netfoo's privileged helper is installed, and the same version as the app. */
+export const helperStatus = () => invoke<HelperStatus>('helper_status');
+
+/** Installs or updates the helper. The system asks for an administrator's password. */
+export const installHelper = () => invoke<void>('install_helper');
+
+/** Removes the helper. The system asks for an administrator's password. */
+export const uninstallHelper = () => invoke<void>('uninstall_helper');
 
 // Changes. Each goes to the privileged helper, which may show a password
 // prompt; they reject with a message to show as is.

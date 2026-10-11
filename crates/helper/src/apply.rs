@@ -76,7 +76,7 @@ fn include_from_smb_conf(paths: &Paths) -> Result<(), ApplyError> {
 }
 
 fn write(path: &Path, contents: &str) -> Result<(), ApplyError> {
-    write_atomically(path, contents).map_err(|source| ApplyError::Write {
+    write_atomically(path, contents.as_bytes(), 0o644).map_err(|source| ApplyError::Write {
         path: path.display().to_string(),
         source,
     })

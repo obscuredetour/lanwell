@@ -5,7 +5,7 @@
   "build": {
     "devUrl": "http://localhost:1430",
     "frontendDist": "ui/dist",
-    "beforeDevCommand": { "script": "pnpm dev", "cwd": "ui" },
+    "beforeDevCommand": { "script": "cargo build --quiet -p netfoo-helper && pnpm dev", "cwd": "ui" },
     "beforeBuildCommand": { "script": "pnpm build", "cwd": "ui" }
   },
   "app": {

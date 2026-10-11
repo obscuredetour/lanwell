@@ -15,6 +15,9 @@ fn main() {
             commands::system_info,
             commands::load_state,
             commands::local_users,
+            commands::helper_status,
+            commands::install_helper,
+            commands::uninstall_helper,
             commands::apply,
         ])
         .run(tauri::generate_context!())

@@ -62,7 +62,7 @@ impl Services for SystemServices {
 }
 
 /// Runs a system program with a plain environment and returns its output.
-fn run(program: &str, args: &[&str], stdin: Option<&str>) -> Result<String, CommandError> {
+pub fn run(program: &str, args: &[&str], stdin: Option<&str>) -> Result<String, CommandError> {
     let error = |message: String| CommandError {
         program: program.to_string(),
         message,
