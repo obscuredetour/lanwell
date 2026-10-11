@@ -30,10 +30,14 @@ pub enum Request {
     SetSmbPassword { user: UserName, password: Secret },
     /// Mount a share from another machine, replacing any netfoo mount on the
     /// same folder. `password` is for an SMB user login: needed for a new
-    /// one, or left out to keep the one saved for this folder.
+    /// one, or left out to keep the one already saved.
+    ///
+    /// `replaces` is the folder of the mount this edits, if the edit moves it
+    /// to another one: that mount goes, and its saved password comes along.
     SetMount {
         mount: Mount,
         password: Option<Secret>,
+        replaces: Option<AbsolutePath>,
     },
     /// Unmount the share on this folder and stop mounting it. The folder stays.
     RemoveMount { mount_point: AbsolutePath },

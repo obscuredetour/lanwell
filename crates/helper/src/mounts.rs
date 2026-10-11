@@ -20,12 +20,21 @@ use crate::apply::{ApplyError, write};
 use crate::files::write_atomically;
 use crate::services::Services;
 
-/// Mounts `mount` for `owner`, replacing any netfoo mount on the same folder,
-/// and checks it connects. A folder with a mount netfoo didn't set up (its own
-/// unit, an fstab line, anything mounted there now) is refused and left alone.
+/// What else a [`set`] request says, besides the mount itself.
+pub struct Edit<'a> {
+    /// An SMB user login's password; `None` keeps the one already saved.
+    pub password: Option<&'a Secret>,
+    /// The folder of the mount being edited, if the edit moves it elsewhere.
+    pub replaces: Option<&'a AbsolutePath>,
+}
+
+/// Mounts `mount` for `owner`, replacing any netfoo mount on the same folder
+/// (or on `edit.replaces`), and checks it connects. A folder with a mount
+/// netfoo didn't set up (its own unit, an fstab line, anything mounted there
+/// now) is refused and left alone.
 pub fn set(
     mount: &Mount,
-    password: Option<&Secret>,
+    edit: Edit<'_>,
     owner: Owner,
     paths: &Paths,
     services: &impl Services,
@@ -41,10 +50,19 @@ pub fn set(
     };
 
     let mut state = State::load(&paths.state)?;
-    let ours = state
-        .mounts
-        .iter()
-        .any(|other| other.mount.mount_point == mount.mount_point);
+    let is_ours = |folder: &AbsolutePath| {
+        state
+            .mounts
+            .iter()
+            .any(|other| &other.mount.mount_point == folder)
+    };
+    let moved_from = edit.replaces.filter(|old| *old != &mount.mount_point);
+    if let Some(old) = moved_from
+        && !is_ours(old)
+    {
+        return Err(InvalidValue(format!("{old} isn't one of netfoo's mounts.")).into());
+    }
+    let ours = is_ours(&mount.mount_point);
     if ours {
         // An earlier version of this mount: unmounted first, so the folder can be checked.
         services.disable_now(&names.automount);
@@ -59,7 +77,26 @@ pub fn set(
         .prepare_mount_point(&mount.mount_point)
         .map_err(ApplyError::MountPoint)?;
 
-    save_credentials(&mount.share, password, &paths.credentials, &credentials)?;
+    // The new folder is ready, so the mount can leave the old one. Its saved
+    // password comes along, unless a new one was given.
+    if let Some(old) = moved_from {
+        let old_credentials = paths.credentials.join(UnitNames::for_mount_point(old).stem);
+        if edit.password.is_none() && old_credentials.exists() {
+            fs::rename(&old_credentials, &credentials).map_err(|source| ApplyError::Write {
+                path: credentials.display().to_string(),
+                source,
+            })?;
+        }
+        remove(old, paths, services)?;
+        state = State::load(&paths.state)?;
+    }
+
+    save_credentials(
+        &mount.share,
+        edit.password,
+        &paths.credentials,
+        &credentials,
+    )?;
 
     write(
         &mount_unit,

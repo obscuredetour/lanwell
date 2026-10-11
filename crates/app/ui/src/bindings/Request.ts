@@ -6,4 +6,4 @@ import type { Secret } from "./Secret";
 import type { SmbShare } from "./SmbShare";
 import type { UserName } from "./UserName";
 
-export type Request = { "kind": "setSmbShares", shares: Array<SmbShare>, } | { "kind": "setNfsExports", exports: Array<NfsExport>, } | { "kind": "setSmbPassword", user: UserName, password: Secret, } | { "kind": "setMount", mount: Mount, password: Secret | null, } | { "kind": "removeMount", mountPoint: AbsolutePath, };
+export type Request = { "kind": "setSmbShares", shares: Array<SmbShare>, } | { "kind": "setNfsExports", exports: Array<NfsExport>, } | { "kind": "setSmbPassword", user: UserName, password: Secret, } | { "kind": "setMount", mount: Mount, password: Secret | null, replaces: AbsolutePath | null, } | { "kind": "removeMount", mountPoint: AbsolutePath, };

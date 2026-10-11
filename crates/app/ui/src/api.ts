@@ -51,9 +51,11 @@ export const setSmbPassword = (user: string, password: string) => apply({ kind: 
 /**
  * Mounts a share from another machine, SMB or NFS (replacing any netfoo mount
  * on the same folder). `password` is for an SMB user login: a new one needs
- * it; null keeps the saved one.
+ * it; null keeps the saved one. `replaces` is the folder of the mount being
+ * edited, if the edit moves it.
  */
-export const setMount = (mount: Mount, password: string | null) => apply({ kind: 'setMount', mount, password });
+export const setMount = (mount: Mount, password: string | null, replaces: string | null = null) =>
+  apply({ kind: 'setMount', mount, password, replaces });
 
 /** Unmounts the share on `mountPoint` and stops mounting it. The folder stays. */
 export const removeMount = (mountPoint: string) => apply({ kind: 'removeMount', mountPoint });

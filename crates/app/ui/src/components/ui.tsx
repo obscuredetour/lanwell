@@ -138,7 +138,10 @@ export function createAction() {
     }
   };
 
-  return { busy, error, run };
+  /** Forgets the last error (when what it was about is gone). */
+  const reset = () => setError(null);
+
+  return { busy, error, run, reset };
 }
 
 export function ErrorText(props: { message: string | null }) {

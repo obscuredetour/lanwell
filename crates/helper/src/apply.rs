@@ -84,8 +84,16 @@ pub fn apply(
             }
             services.set_smb_password(user, password)?;
         }
-        Request::SetMount { mount, password } => {
-            mounts::set(mount, password.as_ref(), caller, paths, services)?;
+        Request::SetMount {
+            mount,
+            password,
+            replaces,
+        } => {
+            let edit = mounts::Edit {
+                password: password.as_ref(),
+                replaces: replaces.as_ref(),
+            };
+            mounts::set(mount, edit, caller, paths, services)?;
         }
         Request::RemoveMount { mount_point } => {
             mounts::remove(mount_point, paths, services)?;
@@ -364,6 +372,7 @@ mod tests {
         let request = Request::SetMount {
             mount: mount.clone(),
             password: password(),
+            replaces: None,
         };
         run(request, &paths, &services).unwrap();
 
@@ -421,6 +430,7 @@ mod tests {
         let request = Request::SetMount {
             mount: first_access,
             password: password(),
+            replaces: None,
         };
         run(request, &paths, &services).unwrap();
 
@@ -430,6 +440,7 @@ mod tests {
             Request::SetMount {
                 mount: startup,
                 password: None,
+                replaces: None,
             },
             &paths,
             &services,
@@ -464,6 +475,7 @@ mod tests {
             Request::SetMount {
                 mount,
                 password: None,
+                replaces: None,
             },
             &paths,
             &Recorded::default(),
@@ -482,6 +494,7 @@ mod tests {
             Request::SetMount {
                 mount,
                 password: password(),
+                replaces: None,
             },
             &paths,
             &services,
@@ -501,6 +514,7 @@ mod tests {
             Request::SetMount {
                 mount,
                 password: password(),
+                replaces: None,
             },
             &paths,
             &services,
@@ -528,6 +542,7 @@ mod tests {
         let request = Request::SetMount {
             mount,
             password: password(),
+            replaces: None,
         };
         assert!(matches!(
             run(request, &paths, &services),
@@ -589,6 +604,7 @@ mod tests {
             Request::SetMount {
                 mount: smb,
                 password: password(),
+                replaces: None,
             },
             &paths,
             &services,
@@ -599,6 +615,7 @@ mod tests {
             Request::SetMount {
                 mount: nfs.clone(),
                 password: None,
+                replaces: None,
             },
             &paths,
             &services,
@@ -647,5 +664,68 @@ mod tests {
         assert!(
             text.contains("/run/media/main/films *(ro,sync,no_subtree_check,mp=/run/media/main)")
         );
+    }
+
+    #[test]
+    fn moving_a_mount_keeps_its_password() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+        let before = nas_media(MountWhen::FirstAccess);
+        let request = Request::SetMount {
+            mount: before.clone(),
+            password: password(),
+            replaces: None,
+        };
+        run(request, &paths, &services).unwrap();
+
+        let mut after = before.clone();
+        after.mount_point = AbsolutePath::new("/home/alice/NAS/media").unwrap();
+        let request = Request::SetMount {
+            mount: after.clone(),
+            password: None,
+            replaces: Some(before.mount_point.clone()),
+        };
+        run(request, &paths, &services).unwrap();
+
+        // The old folder's units and password are gone; the new one has both.
+        assert!(
+            !paths
+                .systemd_units
+                .join("home-alice-Network-media.mount")
+                .exists()
+        );
+        assert!(!paths.credentials.join("home-alice-Network-media").exists());
+        assert!(
+            paths
+                .systemd_units
+                .join("home-alice-NAS-media.mount")
+                .exists()
+        );
+        let credentials = paths.credentials.join("home-alice-NAS-media");
+        assert!(
+            fs::read_to_string(credentials)
+                .unwrap()
+                .contains("password=hunter2")
+        );
+
+        let state = State::load(&paths.state).unwrap();
+        assert_eq!(state.mounts.len(), 1);
+        assert_eq!(state.mounts[0].mount, after);
+    }
+
+    #[test]
+    fn only_netfoo_mounts_can_be_moved() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+        let request = Request::SetMount {
+            mount: nas_media(MountWhen::FirstAccess),
+            password: password(),
+            replaces: Some(AbsolutePath::new("/mnt/data").unwrap()),
+        };
+        let result = run(request, &paths, &services);
+        assert!(matches!(result, Err(ApplyError::Invalid(_))));
+        assert!(services.log().is_empty());
     }
 }

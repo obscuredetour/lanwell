@@ -1,8 +1,17 @@
-// "Connect to a share": an SMB share or an NFS export, mounted as a folder here.
+// "Connect to a share": an SMB share or an NFS export, mounted as a folder
+// here. Also edits a mount that's already set up (`editing`).
 
-import { createSignal, For, Match, Show, Switch } from 'solid-js';
+import { createEffect, createSignal, For, Match, on, Show, Switch } from 'solid-js';
 
-import { chooseFolder, listServerExports, listServerShares, type Mount, setMount, type SystemInfo } from '../../api';
+import {
+  chooseFolder,
+  listServerExports,
+  listServerShares,
+  type ManagedMount,
+  type Mount,
+  setMount,
+  type SystemInfo,
+} from '../../api';
 import type { NfsVersion } from '../../bindings/NfsVersion';
 import type { SmbVersion } from '../../bindings/SmbVersion';
 import { Button, createAction, ErrorText, Field, inputClass, Notice, Segmented } from '../ui';
@@ -33,7 +42,15 @@ const NFS_VERSIONS: { value: NfsVersion; label: string }[] = [
   { value: '3', label: 'NFS 3 (macOS, older NAS boxes)' },
 ];
 
-export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }) {
+export function ConnectForm(props: {
+  info: SystemInfo;
+  /** The mount being edited, or null to connect a new one. */
+  editing: ManagedMount | null;
+  /** After any change to the mounts (even one that saved but didn't connect). */
+  onChanged: () => void;
+  /** When editing ends: saved, or cancelled. */
+  onDone: () => void;
+}) {
   const [protocol, setProtocol] = createSignal<Protocol>('smb');
   const [address, setAddress] = createSignal('');
   // SMB only: how to sign in.
@@ -49,6 +66,35 @@ export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }
   const [nfsVersion, setNfsVersion] = createSignal<NfsVersion>('automatic');
   const [connected, setConnected] = createSignal<string | null>(null);
   const action = createAction();
+
+  // Fills the form with the mount being edited, or empties it when editing ends.
+  createEffect(
+    on(
+      () => props.editing,
+      (editing) => {
+        const share = editing?.share;
+        setProtocol(share?.protocol ?? 'smb');
+        setAddress(share?.address ?? '');
+        const login = share?.protocol === 'smb' ? share.login : null;
+        setAsGuest(login?.kind === 'guest');
+        setUsername(login?.kind === 'user' ? login.username : '');
+        setDomain(login?.kind === 'user' ? (login.domain ?? '') : '');
+        setPassword('');
+        setSmbVersion(share?.protocol === 'smb' ? share.version : 'automatic');
+        setNfsVersion(share?.protocol === 'nfs' ? share.version : 'automatic');
+        setCustomFolder(editing?.mountPoint ?? null);
+        setAtStartup(editing?.when === 'startup');
+        setReadOnly(editing?.readOnly ?? false);
+        action.reset();
+      },
+    ),
+  );
+
+  /** Editing a mount that already has a saved password, which an empty field keeps. */
+  const keepsPassword = () => {
+    const share = props.editing?.share;
+    return share?.protocol === 'smb' && share.login.kind === 'user';
+  };
 
   const smb = () => parseSmbAddress(address());
   const nfs = () => parseNfsAddress(address());
@@ -93,15 +139,27 @@ export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }
     event.preventDefault();
     setConnected(null);
     const usesPassword = protocol() === 'smb' && !asGuest();
-    const succeeded = await action.run(() => setMount(mount(), usesPassword ? password() : null));
+    // null keeps the saved password, when there is one.
+    const newPassword = !usesPassword || (password() === '' && keepsPassword()) ? null : password();
+    const replaces = props.editing?.mountPoint ?? null;
+    const succeeded = await action.run(() => setMount(mount(), newPassword, replaces));
     // A mount that's saved but didn't connect is listed too (with its error here).
-    props.onConnected();
+    props.onChanged();
     if (succeeded) {
       setConnected(`Connected. ${shareName()} is at ${tildify(folder(), props.info.homeDir)}.`);
-      setAddress('');
-      setPassword('');
-      setCustomFolder(null);
+      if (props.editing) {
+        props.onDone();
+      } else {
+        setAddress('');
+        setPassword('');
+        setCustomFolder(null);
+      }
     }
+  };
+
+  const cancel = () => {
+    setConnected(null);
+    props.onDone();
   };
 
   const ready = () => {
@@ -168,7 +226,12 @@ export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }
             <Field label="User name">
               <input class={inputClass} value={username()} onInput={(e) => setUsername(e.currentTarget.value)} />
             </Field>
-            <Field label="Password" hint="Kept in a file only the system can read.">
+            <Field
+              label="Password"
+              hint={
+                keepsPassword() ? 'Leave empty to keep the saved password.' : 'Kept in a file only the system can read.'
+              }
+            >
               <input
                 type="password"
                 class={inputClass}
@@ -272,9 +335,16 @@ export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }
         </div>
       </details>
 
-      <Button type="submit" variant="primary" disabled={action.busy() || !ready()}>
-        {action.busy() ? 'Connecting…' : 'Connect'}
-      </Button>
+      <div class="flex gap-2">
+        <Button type="submit" variant="primary" disabled={action.busy() || !ready()}>
+          {action.busy() ? 'Connecting…' : props.editing ? 'Save' : 'Connect'}
+        </Button>
+        <Show when={props.editing}>
+          <Button disabled={action.busy()} onClick={cancel}>
+            Cancel
+          </Button>
+        </Show>
+      </div>
       <ErrorText message={action.error()} />
       <Show when={connected()}>
         <p class="text-accent">{connected()}</p>

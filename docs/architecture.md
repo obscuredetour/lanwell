@@ -156,6 +156,13 @@ server's SMB shares with `smbclient` (its password passed in `$PASSWD`, not
 on the command line) and its NFS exports with `showmount` (which only NFS 3
 servers answer; for NFS 4-only ones, the path is typed).
 
+**Editing.** An edit is a `SetMount` for the new settings, with `replaces`
+set to the mount's old folder. If the folder changed, the helper checks the
+new one first, then moves the saved password across and removes the old
+mount; an empty password field keeps the saved one. An SMB address can name
+a folder inside a share (`//nas.lan/media/films`); NFS addresses always
+could.
+
 ## macOS (later, if wanted)
 
 The core and UI carry over; the helper and the config rendering don't.
