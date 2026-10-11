@@ -12,4 +12,16 @@ sambaInstalled: boolean,
 /**
  * The NFS server's tools (`exportfs`) are installed.
  */
-nfsServerInstalled: boolean, };
+nfsServerInstalled: boolean, 
+/**
+ * cifs-utils (`mount.cifs`) is installed, which mounting SMB shares needs.
+ */
+cifsInstalled: boolean, 
+/**
+ * Samba's client (`smbclient`) is installed, which listing a server's shares needs.
+ */
+smbclientInstalled: boolean, 
+/**
+ * The user's home folder, where mounts go by default (`~/Network/<share>`).
+ */
+homeDir: string | null, };

@@ -3,8 +3,10 @@
 //! netfoo writes only files of its own, plus one `include` line in smb.conf.
 //! Everything else in the system's config is left as it was.
 
+pub mod cifs;
 pub mod nfs;
 pub mod samba;
+pub mod systemd;
 
 use std::path::{Path, PathBuf};
 
@@ -24,6 +26,10 @@ pub struct Paths {
     pub smb_conf: PathBuf,
     /// The NFS exports netfoo manages. `exportfs` reads every file in /etc/exports.d.
     pub nfs_exports: PathBuf,
+    /// Where the mounts' systemd units go (the administrator's units, not a package's).
+    pub systemd_units: PathBuf,
+    /// The mounts' credentials files, readable only by root.
+    pub credentials: PathBuf,
 }
 
 impl Paths {
@@ -33,6 +39,8 @@ impl Paths {
             samba_shares: "/etc/samba/netfoo.conf".into(),
             smb_conf: "/etc/samba/smb.conf".into(),
             nfs_exports: "/etc/exports.d/netfoo.exports".into(),
+            systemd_units: "/etc/systemd/system".into(),
+            credentials: "/etc/netfoo/credentials".into(),
         }
     }
 
@@ -45,6 +53,8 @@ impl Paths {
             samba_shares: reroot(system.samba_shares),
             smb_conf: reroot(system.smb_conf),
             nfs_exports: reroot(system.nfs_exports),
+            systemd_units: reroot(system.systemd_units),
+            credentials: reroot(system.credentials),
         }
     }
 }

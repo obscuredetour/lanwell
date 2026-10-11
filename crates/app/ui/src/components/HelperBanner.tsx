@@ -35,7 +35,7 @@ export function HelperBanner(props: { status: HelperStatus | undefined; onChange
       </Match>
       <Match when={props.status?.kind === 'outdated'}>
         <Banner
-          message="netfoo's system helper is from a different version of netfoo. Update it to keep changes working."
+          message="netfoo's system helper is from a different build of netfoo. Update it to keep changes working."
           button="Update helper"
         />
       </Match>

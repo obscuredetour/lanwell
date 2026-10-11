@@ -1,7 +1,7 @@
 # netfoo architecture
 
-netfoo is a desktop app for sharing folders on the network (Samba and NFS)
-and, next, for mounting other machines' shares. This document records how
+netfoo is a desktop app for mounting other machines' shares (SMB, as
+folders here) and for sharing folders on the network (Samba and NFS). This document records how
 the pieces fit and why. Change the decisions at the end deliberately, and
 update this file when you do.
 
@@ -85,9 +85,40 @@ the helper D-Bus runs is the root-owned copy.
 | `/etc/samba/netfoo.conf` | Generated share sections. Included from smb.conf. |
 | `/etc/exports.d/netfoo.exports` | Generated exports. `exportfs` reads every file in exports.d. |
 | `/etc/samba/smb.conf` | Not netfoo's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), netfoo writes a minimal one, which is the user's from then on. |
+| `/etc/systemd/system/<mount point>.mount` | A mount, as a systemd unit named after its folder (`systemd-escape --path`). |
+| `/etc/systemd/system/<mount point>.automount` | For a mount that waits to be opened: mounts it on first access. |
+| `/etc/netfoo/credentials/<mount point>` | A mount's user name and password, for mount.cifs. Mode 600, in a 700 folder: only root can read them. Never in the state file. |
 
 Generated files are never parsed back: they're rewritten from the state file
 on every change, and say so at the top.
+
+## Mounting other machines' shares
+
+A mount is a systemd `.mount` unit (`Type=cifs`), like an fstab line with
+`x-systemd.automount`, without touching fstab. When it connects is the
+person's choice:
+
+- **When first opened** (the default): an `.automount` unit is enabled, and
+  the share mounts when something opens the folder. Startup never waits for
+  the server. netfoo also mounts it once straight away, so a wrong password
+  shows up while the person is still in netfoo.
+- **At startup**: the `.mount` unit is enabled itself (`WantedBy=remote-fs.target`).
+  Startup waits for the server, up to `TimeoutSec=30`, every time it's off;
+  the UI says so before it's chosen.
+
+Files appear as the person who added the mount (`uid=`/`gid=`); the helper
+takes them from D-Bus (the caller's account), not from the request. Mounts
+default to `~/Network/<share>`; the app creates a folder in the person's home
+itself, so it's theirs. System folders (/etc, /usr, ...) are refused, and so
+is a folder with files in it, which the share would hide.
+
+When mounting fails, the helper reads what mount.cifs logged for that
+attempt and explains it ("The server didn't accept the user name or
+password" for `mount error(13)`). The mount stays saved, so it can be fixed
+and tried again. The app shows each mount's state (connected, connects when
+opened, couldn't connect) by asking systemd, without root, and can list a
+server's shares with `smbclient` (its password passed in `$PASSWD`, not on
+the command line).
 
 ## macOS (planned)
 
@@ -107,10 +138,9 @@ The core and UI carry over; the helper and the config rendering don't.
 
 ## Roadmap
 
-1. **Mounting on Linux**: find SMB and NFS servers (mDNS, WS-Discovery), mount
-   them as systemd `.mount` + `.automount` units (so boot never waits for a
-   NAS), with credentials in a root-only file. `Request` gains `AddMount` and
-   `RemoveMount`.
+1. **More mounting**: find servers on the network (mDNS, WS-Discovery);
+   edit a mount in place (today: remove and add it again); folders inside a
+   share (`//nas.lan/media/films`); NFS mounts.
 2. **Running the services**: start and enable Samba/NFS when the first share is
    added (today the helper only reloads them if they're already running), and
    open the firewall (firewalld's D-Bus API, or ufw).

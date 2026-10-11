@@ -14,6 +14,8 @@ pub const OBJECT_PATH: &str = "/io/netfoo/Helper1";
 pub mod actions {
     /// Add, change or remove shared folders.
     pub const MANAGE_SHARES: &str = "io.netfoo.manage-shares";
+    /// Mount other machines' shares here, or stop mounting them.
+    pub const MANAGE_MOUNTS: &str = "io.netfoo.manage-mounts";
     /// Set a user's Samba password.
     pub const SET_PASSWORD: &str = "io.netfoo.set-password";
 }

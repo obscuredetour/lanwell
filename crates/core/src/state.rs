@@ -14,6 +14,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::mount::ManagedMount;
 use crate::share::{NfsExport, SmbShare};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,6 +23,7 @@ use crate::share::{NfsExport, SmbShare};
 pub struct State {
     pub smb_shares: Vec<SmbShare>,
     pub nfs_exports: Vec<NfsExport>,
+    pub smb_mounts: Vec<ManagedMount>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -85,6 +87,7 @@ mod tests {
                 access: SmbAccess::Guest,
             }],
             nfs_exports: vec![],
+            smb_mounts: vec![],
         };
         std::fs::write(&path, state.to_json()).unwrap();
         assert_eq!(State::load(&path).unwrap(), state);

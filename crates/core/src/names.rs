@@ -16,11 +16,11 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[error("{0}")]
 pub struct InvalidValue(pub String);
 
-fn invalid(message: impl Into<String>) -> InvalidValue {
+pub(crate) fn invalid(message: impl Into<String>) -> InvalidValue {
     InvalidValue(message.into())
 }
 
-fn has_control_chars(value: &str) -> bool {
+pub(crate) fn has_control_chars(value: &str) -> bool {
     value.chars().any(char::is_control)
 }
 
@@ -175,6 +175,29 @@ fn check_nfs_client(client: &str) -> Result<(), InvalidValue> {
     if !client.chars().all(allowed) {
         return Err(invalid(format!(
             "\"{client}\" isn't a host name, address or network netfoo understands."
+        )));
+    }
+    Ok(())
+}
+
+/// A user name or domain on another machine, for signing in to its shares.
+///
+/// Other systems allow far more than [`UserName`] does here (capitals,
+/// spaces, `DOMAIN\user`), so this only rejects what would break the
+/// credentials file it's written to: line breaks and other control characters.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct RemoteName(String);
+
+validated_string!(RemoteName, check_remote_name);
+
+fn check_remote_name(name: &str) -> Result<(), InvalidValue> {
+    if name.trim().is_empty() {
+        return Err(invalid("A user name can't be empty."));
+    }
+    if has_control_chars(name) || name.len() > 256 {
+        return Err(invalid(format!(
+            "\"{name}\" isn't a user name netfoo can use."
         )));
     }
     Ok(())

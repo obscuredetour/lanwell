@@ -7,10 +7,12 @@
 mod commands;
 #[cfg(target_os = "linux")]
 mod helper;
+mod mounts;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::system_info,
             commands::load_state,
@@ -19,6 +21,9 @@ fn main() {
             commands::install_helper,
             commands::uninstall_helper,
             commands::apply,
+            commands::mount_statuses,
+            commands::list_server_shares,
+            commands::open_mount,
         ])
         .run(tauri::generate_context!())
         .expect("netfoo couldn't start");

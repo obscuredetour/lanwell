@@ -10,7 +10,8 @@ use std::path::Path;
 /// beside it, then renamed over it. Creates the directory if it's missing.
 ///
 /// `mode` is the file's permissions: 0o644 (anyone may read it, root may
-/// write it) for config, like the rest of /etc; 0o755 for programs.
+/// write it) for config, like the rest of /etc; 0o755 for programs; 0o600
+/// for secrets.
 pub fn write_atomically(path: &Path, contents: &[u8], mode: u32) -> io::Result<()> {
     let dir = path
         .parent()
@@ -22,8 +23,9 @@ pub fn write_atomically(path: &Path, contents: &[u8], mode: u32) -> io::Result<(
 
     let temporary = dir.join(format!(".{}.netfoo-new", name.to_string_lossy()));
     let mut file = fs::File::create(&temporary)?;
-    file.write_all(contents)?;
+    // Before writing, so a secret is never readable by others, even briefly.
     file.set_permissions(fs::Permissions::from_mode(mode))?;
+    file.write_all(contents)?;
     file.sync_all()?;
     fs::rename(&temporary, path)
 }

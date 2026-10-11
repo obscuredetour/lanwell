@@ -2,20 +2,21 @@ import type { JSX } from 'solid-js';
 import { createResource, createSignal, Match, Show, Switch } from 'solid-js';
 
 import { helperStatus, loadState, messageOf, systemInfo } from './api';
-import { FolderOpen, Network } from './icons';
+import { FolderOpen, HardDrive, Network } from './icons';
 import { HelperBanner } from './components/HelperBanner';
 import { HelperCard } from './components/HelperCard';
+import { MountsPage } from './components/MountsPage';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
 import { Notice } from './components/ui';
 
-type Page = 'samba' | 'nfs';
+type Page = 'mounts' | 'samba' | 'nfs';
 
 export function App() {
   const [info] = createResource(systemInfo);
   const [state, { refetch }] = createResource(loadState);
   const [helper, { refetch: refetchHelper }] = createResource(helperStatus);
-  const [page, setPage] = createSignal<Page>('samba');
+  const [page, setPage] = createSignal<Page>('mounts');
 
   const NavItem = (props: { page: Page; icon: JSX.Element; label: string; detail: string }) => (
     <button
@@ -32,10 +33,17 @@ export function App() {
     </button>
   );
 
+  const NavHeading = (props: { children: string }) => (
+    <h2 class="px-2.5 pt-3 pb-1 text-xs font-medium text-fg-muted">{props.children}</h2>
+  );
+
   return (
     <div class="flex h-full">
       <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-border bg-panel p-3">
-        <h1 class="px-2.5 pt-1 pb-3 text-lg font-semibold">netfoo</h1>
+        <h1 class="px-2.5 pt-1 pb-1 text-lg font-semibold">netfoo</h1>
+        <NavHeading>On other computers</NavHeading>
+        <NavItem page="mounts" icon={<HardDrive size={18} />} label="Network folders" detail="Shares mounted here" />
+        <NavHeading>Shared from here</NavHeading>
         <NavItem
           page="samba"
           icon={<FolderOpen size={18} />}
@@ -55,6 +63,9 @@ export function App() {
         </Show>
         <Show when={info() && state()}>
           <Switch>
+            <Match when={page() === 'mounts'}>
+              <MountsPage info={info()!} mounts={state()!.smbMounts} onChanged={refetch} />
+            </Match>
             <Match when={page() === 'samba'}>
               <SambaPage info={info()!} shares={state()!.smbShares} onChanged={refetch} />
             </Match>

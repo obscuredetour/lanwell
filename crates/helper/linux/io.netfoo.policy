@@ -19,6 +19,16 @@
     </defaults>
   </action>
 
+  <action id="io.netfoo.manage-mounts">
+    <description>Mount network shares</description>
+    <message>Authentication is required to change which network shares are mounted on this computer.</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
   <action id="io.netfoo.set-password">
     <description>Set a file sharing password</description>
     <message>Authentication is required to set a user's file sharing password.</message>

@@ -18,6 +18,7 @@
 
 mod apply;
 mod files;
+mod mounts;
 mod services;
 
 #[cfg(target_os = "linux")]

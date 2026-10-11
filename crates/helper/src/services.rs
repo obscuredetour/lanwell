@@ -1,13 +1,17 @@
-//! The system programs the helper runs after changing config files.
+//! What the helper does to the running system, after changing config files:
+//! reloading services, starting units, preparing mount points.
 //!
-//! [`Services`] is a trait so `apply`'s tests can check what would be run
-//! without running anything.
+//! [`Services`] is a trait so `apply`'s tests can check what would be done
+//! without doing anything.
 
 use std::io::Write;
+use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use netfoo_core::linux::cifs::explain_mount_failure;
 use netfoo_core::system::find_program;
-use netfoo_core::{Secret, UserName};
+use netfoo_core::{AbsolutePath, Secret, UserName};
 
 pub trait Services {
     /// Makes Samba pick up changed shares, if it's running.
@@ -16,13 +20,26 @@ pub trait Services {
     fn reload_nfs_exports(&self) -> Result<(), CommandError>;
     /// Sets `user`'s Samba password, adding them to Samba if needed.
     fn set_smb_password(&self, user: &UserName, password: &Secret) -> Result<(), CommandError>;
+    /// Makes systemd read changed unit files.
+    fn reload_units(&self) -> Result<(), CommandError>;
+    /// Enables `unit` and starts it now. If it's a mount that fails, says why.
+    fn enable_now(&self, unit: &str) -> Result<(), CommandError>;
+    /// Stops and disables `unit`, if there is one.
+    fn disable_now(&self, unit: &str);
+    /// Starts `unit` now. If it's a mount that fails, says why.
+    fn start(&self, unit: &str) -> Result<(), CommandError>;
+    /// Makes sure a share can be mounted on `path`: creates it if it's
+    /// missing, and refuses it if it has files in it (mounting would hide them).
+    fn prepare_mount_point(&self, path: &AbsolutePath) -> Result<(), String>;
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("{program}: {message}")]
-pub struct CommandError {
-    program: String,
-    message: String,
+pub enum CommandError {
+    #[error("{program}: {message}")]
+    Failed { program: String, message: String },
+    /// A failure netfoo can put in plain words.
+    #[error("{0}")]
+    Explained(String),
 }
 
 /// The real thing: runs the system's own tools.
@@ -59,11 +76,70 @@ impl Services for SystemServices {
         let input = format!("{0}\n{0}\n", password.expose());
         run("smbpasswd", &["-s", "-a", user.as_str()], Some(&input)).map(drop)
     }
+
+    fn reload_units(&self) -> Result<(), CommandError> {
+        run("systemctl", &["daemon-reload"], None).map(drop)
+    }
+
+    fn enable_now(&self, unit: &str) -> Result<(), CommandError> {
+        explained(unit, || run("systemctl", &["enable", "--now", unit], None))
+    }
+
+    fn disable_now(&self, unit: &str) {
+        // Fails when there's no such unit, which is fine: nothing to stop.
+        let _ = run("systemctl", &["disable", "--now", unit], None);
+    }
+
+    fn start(&self, unit: &str) -> Result<(), CommandError> {
+        explained(unit, || run("systemctl", &["start", unit], None))
+    }
+
+    fn prepare_mount_point(&self, path: &AbsolutePath) -> Result<(), String> {
+        let folder = Path::new(path.as_str());
+        match std::fs::read_dir(folder) {
+            Ok(mut entries) => match entries.next() {
+                Some(_) => Err(format!(
+                    "{path} already has files in it, which the share would hide. Choose an empty folder."
+                )),
+                None => Ok(()),
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::create_dir_all(folder).map_err(|e| format!("Couldn't create {path}: {e}"))
+            }
+            Err(e) => Err(format!("Couldn't open {path}: {e}")),
+        }
+    }
+}
+
+/// Runs `systemctl`, and if a mount fails, replaces systemd's "see the
+/// journal" with what mount.cifs said there, explained when possible.
+fn explained(
+    unit: &str,
+    systemctl: impl FnOnce() -> Result<String, CommandError>,
+) -> Result<(), CommandError> {
+    let started = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let Err(error) = systemctl() else {
+        return Ok(());
+    };
+    if !unit.ends_with(".mount") {
+        return Err(error);
+    }
+    // Only what was logged since this attempt began.
+    let since = format!("--since=@{started}");
+    let log = run(
+        "journalctl",
+        &["--unit", unit, &since, "--output=cat", "--no-pager"],
+        None,
+    )
+    .unwrap_or_default();
+    Err(explain_mount_failure(&log).map_or(error, CommandError::Explained))
 }
 
 /// Runs a system program with a plain environment and returns its output.
 pub fn run(program: &str, args: &[&str], stdin: Option<&str>) -> Result<String, CommandError> {
-    let error = |message: String| CommandError {
+    let error = |message: String| CommandError::Failed {
         program: program.to_string(),
         message,
     };

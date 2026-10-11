@@ -4,11 +4,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use netfoo_core::Request;
 use netfoo_core::bus::{BUS_NAME, OBJECT_PATH};
 use netfoo_core::linux::Paths;
+use netfoo_core::{Owner, Request};
 use zbus::fdo;
 use zbus::message::Header;
+use zbus::names::UniqueName;
 
 use crate::services::SystemServices;
 use crate::{apply, polkit};
@@ -69,12 +70,13 @@ impl Helper {
             .sender()
             .ok_or_else(|| fdo::Error::AccessDenied("The caller is unknown.".into()))?;
         polkit::authorize(connection, caller, request.action()).await?;
+        let owner = caller_account(connection, caller).await?;
 
         let _applying = self
             .applying
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        apply::apply(&request, &self.paths, &SystemServices)
+        apply::apply(&request, owner, &self.paths, &SystemServices)
             .map_err(|e| fdo::Error::Failed(e.to_string()))
     }
 
@@ -83,6 +85,41 @@ impl Helper {
     fn version(&self) -> &str {
         env!("CARGO_PKG_VERSION")
     }
+}
+
+/// The account behind a bus name, as D-Bus vouches for it: its user, and that
+/// user's primary group.
+async fn caller_account(
+    connection: &zbus::Connection,
+    caller: &UniqueName<'_>,
+) -> fdo::Result<Owner> {
+    let uid = fdo::DBusProxy::new(connection)
+        .await?
+        .get_connection_unix_user(caller.clone().into())
+        .await?;
+    let gid = primary_group(uid)
+        .ok_or_else(|| fdo::Error::Failed(format!("User {uid} has no account here.")))?;
+    Ok(Owner { uid, gid })
+}
+
+/// `uid`'s primary group, from the system's user database (/etc/passwd, or
+/// whatever else it's configured to use).
+fn primary_group(uid: u32) -> Option<u32> {
+    let mut entry: libc::passwd = unsafe { std::mem::zeroed() };
+    let mut found: *mut libc::passwd = std::ptr::null_mut();
+    let mut buffer = vec![0 as libc::c_char; 16 * 1024];
+    // SAFETY: getpwuid_r writes only into `entry` and `buffer` (whose length it's
+    // given), and sets `found` to `&entry` on success or null if there's none.
+    let status = unsafe {
+        libc::getpwuid_r(
+            uid,
+            &mut entry,
+            buffer.as_mut_ptr(),
+            buffer.len(),
+            &mut found,
+        )
+    };
+    (status == 0 && !found.is_null()).then_some(entry.pw_gid)
 }
 
 /// Tracks when the helper was last used, so it can exit when it isn't.

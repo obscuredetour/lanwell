@@ -1,8 +1,12 @@
 # netfoo
 
-Share folders on your network, and (soon) mount other machines' shares, without
-editing smb.conf, /etc/exports or fstab.
+Mount other machines' shares, and share folders on your network, without editing
+fstab, smb.conf or /etc/exports.
 
+- **Network folders**: type `//nas.lan/media`, sign in, and the share appears at
+  `~/Network/media`. It connects when the folder's first opened, so startup never
+  waits for the NAS (or at startup, if you'd rather). The password is kept where
+  only the system can read it.
 - **Samba shares** for Windows, Macs and phones: pick a folder, choose who can
   open it (people on this machine, or anyone), done. Set each person's Samba
   password from the same place.
@@ -31,8 +35,8 @@ through the helper, a system D-Bus service. Until it's installed, the app
 shows an **Install helper** button, which asks for an administrator's
 password (with pkexec) and installs the debug build `cargo tauri dev` made.
 After changing the helper, the button changes to **Update helper**, since
-the app sees a different version; to reinstall the same version, or from a
-terminal (asks for sudo):
+the installed helper is no longer the build beside the app. To install from
+a terminal instead (asks for sudo):
 
 ```bash
 scripts/install-helper-dev.sh

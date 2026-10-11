@@ -23,6 +23,12 @@ pub struct SystemInfo {
     pub samba_installed: bool,
     /// The NFS server's tools (`exportfs`) are installed.
     pub nfs_server_installed: bool,
+    /// cifs-utils (`mount.cifs`) is installed, which mounting SMB shares needs.
+    pub cifs_installed: bool,
+    /// Samba's client (`smbclient`) is installed, which listing a server's shares needs.
+    pub smbclient_installed: bool,
+    /// The user's home folder, where mounts go by default (`~/Network/<share>`).
+    pub home_dir: Option<String>,
 }
 
 impl SystemInfo {
@@ -38,6 +44,9 @@ impl SystemInfo {
             os,
             samba_installed: find_program("smbd").is_some(),
             nfs_server_installed: find_program("exportfs").is_some(),
+            cifs_installed: find_program("mount.cifs").is_some(),
+            smbclient_installed: find_program("smbclient").is_some(),
+            home_dir: std::env::var("HOME").ok(),
         }
     }
 }
@@ -63,7 +72,12 @@ pub enum HelperStatus {
 impl HelperStatus {
     /// Asks the installed helper its version (`netfoo-helper --version`, which
     /// needs no root) and compares it with `expected`.
-    pub fn detect(expected: &str) -> Self {
+    ///
+    /// `bundled` is the helper that came with the app, if there is one beside
+    /// it. Builds of the same version can differ (in development they always
+    /// share one), so if it isn't byte for byte the installed one, the
+    /// installed one is outdated too.
+    pub fn detect(expected: &str, bundled: Option<&Path>) -> Self {
         if !cfg!(target_os = "linux") {
             return Self::Unsupported;
         }
@@ -76,7 +90,9 @@ impl HelperStatus {
         // "netfoo-helper 0.1.0"
         let stdout = String::from_utf8_lossy(&output.stdout);
         let installed = stdout.split_whitespace().last().unwrap_or_default();
-        if installed == expected {
+        let same_build = bundled
+            .is_none_or(|bundled| same_contents(bundled, Path::new(crate::linux::HELPER_PATH)));
+        if installed == expected && same_build {
             Self::Ready {
                 version: installed.to_string(),
             }
@@ -86,6 +102,16 @@ impl HelperStatus {
             }
         }
     }
+}
+
+/// Whether two files hold the same bytes (comparing sizes first, which
+/// usually settles it).
+fn same_contents(a: &Path, b: &Path) -> bool {
+    let size = |path: &Path| std::fs::metadata(path).map(|m| m.len()).ok();
+    if size(a).is_none() || size(a) != size(b) {
+        return false;
+    }
+    matches!((std::fs::read(a), std::fs::read(b)), (Ok(a), Ok(b)) if a == b)
 }
 
 /// Where a system program is installed. Looks in the standard directories
