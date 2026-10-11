@@ -1,0 +1,4 @@
+# Files `cargo tauri dev` doesn't rebuild the app for. The UI is Vite's:
+# it reloads UI changes in place, so restarting the app for them only loses
+# the page's state.
+ui/

@@ -1,0 +1,17 @@
+[Unit]
+Description=netfoo helper (applies changes to shared folders)
+
+[Service]
+Type=dbus
+BusName=io.netfoo.Helper1
+ExecStart=/usr/lib/netfoo/netfoo-helper
+
+# The helper only writes under /etc and runs Samba's and NFS's own tools. It
+# never needs to write to anyone's home folder (shared folders are only named
+# in config, not touched), or to load kernel modules.
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes

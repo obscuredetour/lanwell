@@ -1,0 +1,20 @@
+[package]
+name = "netfoo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Share folders and mount network shares, without the command line"
+publish = false
+
+[dependencies]
+netfoo-core = { path = "../core", features = ["ts"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "5.19.0", default-features = false, features = ["tokio"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

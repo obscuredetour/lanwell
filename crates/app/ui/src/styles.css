@@ -1,0 +1,149 @@
+@import 'tailwindcss';
+
+/*
+ * Colours are roles, not hues: components use only the names below (as
+ * Tailwind colours: bg-panel, text-fg-muted, border-border ...), and each
+ * theme sets the roles. Light and dark follow the system.
+ *
+ * Contrast (WCAG): --fg-muted and --accent are text colours, so they keep
+ * 4.5:1 against --bg, --panel and --hover, as --on-accent does against
+ * --accent. --control-border outlines checkboxes and radios, which need 3:1.
+ * Check a new colour before changing one.
+ */
+@theme {
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-field: var(--field);
+  --color-hover: var(--hover);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Cantarell', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', monospace;
+}
+
+:root {
+  --bg: #ffffff;
+  --panel: #f4f6f8;
+  --field: #ffffff;
+  --hover: #e9edf1;
+  --border: #d8dee4;
+  --control-border: #7d8a96;
+  --fg: #1c2329;
+  --fg-muted: #5b6670;
+  --accent: #7438a8;
+  --on-accent: #ffffff;
+  --danger: #c4343a;
+  --warning: #9a6400;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #181c20;
+    --panel: #1f2428;
+    --field: #14181b;
+    --hover: #2a3036;
+    --border: #343b42;
+    --control-border: #6f7b86;
+    --fg: #e6eaee;
+    --fg-muted: #9aa5af;
+    --accent: #bf97ed;
+    --on-accent: #1b1030;
+    --danger: #f06a6f;
+    --warning: #e0a83a;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg font-sans text-sm text-fg antialiased;
+  margin: 0;
+  /* A desktop app, not a page: text is selectable only where it's useful. */
+  user-select: none;
+}
+
+input,
+select {
+  user-select: text;
+}
+
+/*
+ * Checkboxes and radio buttons, drawn here rather than by the platform, so
+ * they take the accent and the theme everywhere (WebKitGTK's native ones
+ * don't follow either). Utilities can still override these.
+ */
+@layer base {
+  :root {
+    /* For the native controls that are left (selects, scrollbars). */
+    accent-color: var(--accent);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    border: 1.5px solid var(--control-border);
+    background: var(--field);
+    transition:
+      background-color 0.1s,
+      border-color 0.1s;
+  }
+
+  input[type='checkbox'] {
+    border-radius: 4px;
+  }
+
+  input[type='radio'] {
+    border-radius: 50%;
+  }
+
+  input[type='checkbox']:checked,
+  input[type='radio']:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  /* The tick, cut from a square. */
+  input[type='checkbox']:checked::before {
+    content: '';
+    width: 0.6rem;
+    height: 0.6rem;
+    background: var(--on-accent);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  input[type='radio']:checked::before {
+    content: '';
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background: var(--on-accent);
+  }
+
+  input[type='checkbox']:focus-visible,
+  input[type='radio']:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  input[type='checkbox']:disabled,
+  input[type='radio']:disabled {
+    opacity: 0.5;
+  }
+}

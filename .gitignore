@@ -1,0 +1,6 @@
+/target
+.DS_Store
+
+# The UI's dependencies and build output
+node_modules/
+/crates/app/ui/dist/
