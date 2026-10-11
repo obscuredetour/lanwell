@@ -1,14 +1,17 @@
 // Reading share addresses as they're typed, before the helper checks them
 // properly: enough to suggest a folder and to know which server to browse.
 
-/** `//nas.lan/media`, `\\nas.lan\media` or `smb://nas.lan/media` → server and share. */
+/**
+ * `//nas.lan/media/films`, `\\nas.lan\media\films` or `smb://…` → the server,
+ * and the share with any folder inside it (`media/films`).
+ */
 export function parseSmbAddress(address: string) {
   const rest = address
     .trim()
     .replace(/^(smb:\/\/|\/\/|\\\\)/, '')
     .replaceAll('\\', '/');
-  const [host = '', share = ''] = rest.split('/');
-  return { host, share };
+  const [host = '', ...path] = rest.split('/');
+  return { host, share: path.filter(Boolean).join('/') };
 }
 
 /** `nas.lan:/srv/media` or `nfs://nas.lan/srv/media` → server and exported folder. */

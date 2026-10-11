@@ -53,8 +53,8 @@ export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }
   const smb = () => parseSmbAddress(address());
   const nfs = () => parseNfsAddress(address());
   const host = () => (protocol() === 'smb' ? smb().host : nfs().host);
-  /** The share's own name, which the folder is named after: `media`. */
-  const shareName = () => (protocol() === 'smb' ? smb().share : lastName(nfs().path));
+  /** What the folder is named after: the last part of the address (`media`, or `films` in `media/films`). */
+  const shareName = () => lastName(protocol() === 'smb' ? smb().share : nfs().path);
 
   const suggestedFolder = () =>
     props.info.homeDir && shareName() ? `${props.info.homeDir}/Network/${shareName()}` : '';
@@ -136,7 +136,11 @@ export function ConnectForm(props: { info: SystemInfo; onConnected: () => void }
 
       <Field
         label="Address"
-        hint={protocol() === 'smb' ? 'The server and the share on it.' : 'The server and the folder it exports.'}
+        hint={
+          protocol() === 'smb'
+            ? 'The server and the share on it. Add a folder to mount just that: //nas.lan/media/films.'
+            : 'The server and the folder it exports.'
+        }
       >
         <input
           class={inputClass}

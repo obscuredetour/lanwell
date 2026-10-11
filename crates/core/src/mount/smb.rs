@@ -57,7 +57,8 @@ impl SmbVersion {
     }
 }
 
-/// Where an SMB share is: a server and a share on it, written `//nas.lan/media`.
+/// Where an SMB share is: a server, a share on it, and optionally a folder
+/// inside the share, written `//nas.lan/media` or `//nas.lan/media/films`.
 ///
 /// Also accepts `\\nas.lan\media` (as Windows writes it) and
 /// `smb://nas.lan/media` (as file managers do), and keeps the first form.
@@ -74,12 +75,20 @@ impl SmbAddress {
             .or_else(|| input.strip_prefix("\\\\"))
             .ok_or_else(|| invalid("Write the address like //nas.lan/media."))?;
         let rest = rest.replace('\\', "/");
-        let (host, share) = rest.trim_end_matches('/').split_once('/').ok_or_else(|| {
+        let mut parts = rest.split('/').filter(|part| !part.is_empty());
+        let host = parts.next().unwrap_or_default();
+        check_host(host)?;
+        let share = parts.next().ok_or_else(|| {
             invalid("Add the share's name after the server, like //nas.lan/media.")
         })?;
-        check_host(host)?;
-        check_share(share)?;
-        Ok(Self(format!("//{host}/{share}")))
+        check_name(share, "share name")?;
+        let mut address = format!("//{host}/{share}");
+        for folder in parts {
+            check_name(folder, "folder name")?;
+            address.push('/');
+            address.push_str(folder);
+        }
+        Ok(Self(address))
     }
 
     pub fn as_str(&self) -> &str {
@@ -96,27 +105,27 @@ impl SmbAddress {
         self.parts().1
     }
 
-    fn parts(&self) -> (&str, &str) {
-        self.0[2..]
-            .split_once('/')
-            .expect("checked when it was made")
+    /// The folder inside the share, if there is one, like `films` or `films/old`.
+    pub fn folder(&self) -> Option<&str> {
+        self.parts().2
+    }
+
+    fn parts(&self) -> (&str, &str, Option<&str>) {
+        let rest = &self.0[2..];
+        let (host, rest) = rest.split_once('/').expect("checked when it was made");
+        match rest.split_once('/') {
+            Some((share, folder)) => (host, share, Some(folder)),
+            None => (host, rest, None),
+        }
     }
 }
 
-fn check_share(share: &str) -> Result<(), InvalidValue> {
-    if share.is_empty() {
-        return Err(invalid(
-            "Add the share's name after the server, like //nas.lan/media.",
-        ));
-    }
-    if share.contains('/') {
-        return Err(invalid(
-            "netfoo mounts a whole share; folders inside one aren't supported yet.",
-        ));
-    }
-    if has_control_chars(share) || share.chars().count() > 80 {
+/// Checks a share's name, or a folder's in the path after it: what mount.cifs
+/// and the unit file can take, and not `.` or `..`.
+fn check_name(name: &str, what: &str) -> Result<(), InvalidValue> {
+    if name == "." || name == ".." || has_control_chars(name) || name.chars().count() > 255 {
         return Err(invalid(format!(
-            "\"{share}\" isn't a share name netfoo can use."
+            "\"{name}\" isn't a {what} netfoo can use."
         )));
     }
     Ok(())
@@ -163,13 +172,28 @@ mod tests {
     }
 
     #[test]
+    fn folders_inside_a_share() {
+        for input in [
+            "//nas.lan/media/films/old",
+            "\\\\nas.lan\\media\\films\\old",
+            "smb://nas.lan/media/films/old/",
+        ] {
+            let address = SmbAddress::new(input).unwrap();
+            assert_eq!(address.as_str(), "//nas.lan/media/films/old", "{input}");
+            assert_eq!(address.share(), "media");
+            assert_eq!(address.folder(), Some("films/old"));
+        }
+        assert_eq!(SmbAddress::new("//nas.lan/media").unwrap().folder(), None);
+    }
+
+    #[test]
     fn bad_addresses() {
         for input in [
             "nas.lan/media",
             "//nas.lan",
             "//nas.lan/",
             "//nas lan/media",
-            "//nas.lan/media/movies",
+            "//nas.lan/media/../secret",
         ] {
             assert!(SmbAddress::new(input).is_err(), "{input}");
         }
