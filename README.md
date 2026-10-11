@@ -14,7 +14,7 @@ fstab, smb.conf or /etc/exports.
 - **Leaves your config alone.** netfoo writes files of its own and adds one
   `include` line to smb.conf; anything you configured by hand stays as it was.
 
-Linux now; macOS is planned. Rust core, a small privileged helper behind
+For Linux; macOS maybe later. Rust core, a small privileged helper behind
 polkit, and a Tauri + Solid app. See [docs/architecture.md](docs/architecture.md).
 
 ## Development

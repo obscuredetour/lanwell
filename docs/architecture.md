@@ -14,7 +14,8 @@ update this file when you do.
   exception).
 - **Honest about the protocols.** Samba has users and passwords; NFS trusts
   machines. The UI says so instead of pretending they're the same.
-- **Linux first, then macOS.** Same core and UI; a different helper per OS.
+- **Linux first.** macOS later if it's wanted: the same core and UI, with a
+  different helper per OS.
 
 ## Components
 
@@ -140,7 +141,7 @@ opened, couldn't connect) by asking systemd, without root, and can list a
 server's shares with `smbclient` (its password passed in `$PASSWD`, not on
 the command line).
 
-## macOS (planned)
+## macOS (later, if wanted)
 
 The core and UI carry over; the helper and the config rendering don't.
 
@@ -158,31 +159,38 @@ The core and UI carry over; the helper and the config rendering don't.
 
 ## Roadmap
 
-1. **More mounting**: find servers on the network (mDNS, WS-Discovery);
-   edit a mount in place (today: remove and add it again); folders inside a
-   share (`//nas.lan/media/films`).
-2. **Running the services**: start and enable Samba/NFS when the first share is
-   added (today the helper only reloads them if they're already running), and
-   open the firewall (firewalld's D-Bus API, or ufw).
-3. **Editing** a share in place (today: remove and add again).
-4. **Share-only users**: accounts that can open shares but can't log in.
-5. **macOS**, as above.
-6. **NFS mounts**, tested once netfoo runs on macOS (a Mac can serve NFS):
+1. **NFS mounts**, tested against netfoo's own NFS export (export a folder to
+   `127.0.0.1`, mount `localhost:/that/folder`), or a VM:
    - Connect to a share gets an SMB / NFS switcher. Only SMB has Sign in;
      NFS shows instead that access is decided by the server's export list,
      and that files keep the server's user IDs (a Mac's start at 501, Linux's
-     at 1000, so the export may need `-mapall`).
+     at 1000, so a Mac export may need `-mapall`).
    - More options: an NFS version (Automatic, 4.2, 4.1, 3) in place of the
      SMB one; folder, when to connect and read only stay.
    - Units with `Type=nfs`, the same `nosuid,nodev` and ownership rules, and
      no credentials file.
    - Each mount in the list is tagged with its protocol (SMB is today).
-7. **Packaging**: AUR first, then deb and rpm, each installing the helper
+2. **More mounting**: find servers on the network (mDNS, WS-Discovery);
+   edit a mount in place (today: remove and add it again); folders inside a
+   share (`//nas.lan/media/films`).
+3. **Running the services**: start and enable Samba/NFS when the first share
+   is added (today the helper only reloads them if they're already running),
+   and open the firewall (firewalld's D-Bus API, or ufw).
+4. **Editing** a share in place (today: remove and add again).
+5. **Share-only users**: a user name and password for a share, separate from
+   anyone's login, and unable to log in. Files they write are owned by the
+   folder's owner (`force user`), so permissions stay as they were.
+6. **Packaging**: AUR first, then deb and rpm, each installing the helper
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
    there, and the root-ownership check above has to come first
    ([issue #1](https://github.com/obscuredetour/netfoo/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
+7. **macOS, later, if people want it.** macOS already shares and mounts SMB
+   from its own settings, so netfoo would add little there for a lot of work:
+   a signed, notarized helper (see "macOS (later, if wanted)" above). Its
+   real gap is NFS exports, which have no GUI. The shared core and per-OS
+   helpers keep the door open.
 
 ## Decisions
 
