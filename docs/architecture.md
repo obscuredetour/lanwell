@@ -206,19 +206,21 @@ The core and UI carry over; the helper and the config rendering don't.
 
 ## Roadmap
 
-1. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
-
-2. **Editing** a share in place (today: remove and add again).
-3. **Share-only users**: a user name and password for a share, separate from
+1. **Share-only users**: a user name and password for a share, separate from
    anyone's login, and unable to log in. Files they write are owned by the
    folder's owner (`force user`), so permissions stay as they were.
-4. **Packaging**: AUR first, then deb and rpm, each installing the helper
+2. **Packaging**: AUR first, then deb and rpm, each installing the helper
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
    there, and the root-ownership check above has to come first
    ([issue #1](https://github.com/obscuredetour/netfoo/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
-5. **macOS, later, if people want it.** macOS already shares and mounts SMB
+3. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
+   Not urgent: no one working on netfoo has a Windows PC to test with. When
+   it's requested or built, it will need someone with one to help test (a
+   PC sharing a folder on the same network as netfoo).
+
+4. **macOS, later, if people want it.** macOS already shares and mounts SMB
    from its own settings, so netfoo would add little there for a lot of work:
    a signed, notarized helper (see "macOS (later, if wanted)" above). Its
    real gap is NFS exports, which have no GUI. The shared core and per-OS

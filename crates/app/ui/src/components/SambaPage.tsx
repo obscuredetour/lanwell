@@ -4,15 +4,41 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 
 import { chooseFolder, localUsers, setSmbPassword, setSmbShares, type SmbShare, type SystemInfo } from '../api';
 import { ServerStatus } from './ServerStatus';
-import { Button, createAction, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
+import { Button, createAction, createEditing, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
 
 export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChanged: () => void }) {
   const [users] = createResource(localUsers, { initialValue: [] });
-  const action = createAction();
+  // Separate, so an error shows next to what caused it.
+  const listAction = createAction();
+  const formAction = createAction();
+  const shareForm = createEditing<SmbShare>();
+  let formTop: HTMLDivElement | undefined;
 
   /** Saves the whole list (the helper replaces what it had with it). */
-  const save = async (shares: SmbShare[]) => {
-    if (await action.run(() => setSmbShares(shares))) props.onChanged();
+  const save = async (action: ReturnType<typeof createAction>, shares: SmbShare[]) => {
+    const saved = await action.run(() => setSmbShares(shares));
+    if (saved) props.onChanged();
+    return saved;
+  };
+
+  /** A new share, or the one being edited (found by its name, which is unique) changed. */
+  const saveShare = async (share: SmbShare) => {
+    const original = shareForm.editing();
+    const shares = original
+      ? props.shares.map((other) => (other.name === original.name ? share : other))
+      : [...props.shares, share];
+    if (await save(formAction, shares)) shareForm.done();
+  };
+
+  const stopEditing = () => {
+    formAction.reset();
+    shareForm.done();
+  };
+
+  const startEditing = (share: SmbShare) => {
+    formAction.reset();
+    shareForm.edit(share);
+    formTop?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
@@ -38,22 +64,43 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
                 {share.access.kind === 'guest' ? 'Anyone' : share.access.users.join(', ')}
                 {share.readOnly ? ' · read only' : ''}
               </span>
+              <Button disabled={listAction.busy()} onClick={() => startEditing(share)}>
+                Edit
+              </Button>
               <Button
                 variant="danger"
-                disabled={action.busy()}
-                onClick={() => save(props.shares.filter((other) => other !== share))}
+                disabled={listAction.busy()}
+                onClick={() =>
+                  save(
+                    listAction,
+                    props.shares.filter((other) => other !== share),
+                  )
+                }
               >
                 Stop sharing
               </Button>
             </>
           )}
         </ItemList>
-        <ErrorText message={action.error()} />
+        <ErrorText message={listAction.error()} />
       </Section>
 
-      <Section title="Share a folder">
-        <AddShare users={users()} busy={action.busy()} onAdd={(share) => save([...props.shares, share])} />
-      </Section>
+      <div ref={formTop}>
+        <Section title={shareForm.editing() ? `Edit “${shareForm.editing()!.name}”` : 'Share a folder'}>
+          <Show when={shareForm.form()} keyed>
+            {({ editing }) => (
+              <ShareForm
+                users={users()}
+                initial={editing}
+                busy={formAction.busy()}
+                onSave={saveShare}
+                onCancel={stopEditing}
+              />
+            )}
+          </Show>
+          <ErrorText message={formAction.error()} />
+        </Section>
+      </div>
 
       <Section
         title="Passwords"
@@ -65,12 +112,22 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
   );
 }
 
-function AddShare(props: { users: string[]; busy: boolean; onAdd: (share: SmbShare) => void }) {
-  const [path, setPath] = createSignal('');
-  const [name, setName] = createSignal('');
-  const [guest, setGuest] = createSignal(false);
-  const [chosenUsers, setChosenUsers] = createSignal<string[]>([]);
-  const [readOnly, setReadOnly] = createSignal(false);
+/** Adds a share, or edits `initial`. Starts from `initial`'s settings; rebuilt for each share. */
+function ShareForm(props: {
+  users: string[];
+  initial: SmbShare | null;
+  busy: boolean;
+  onSave: (share: SmbShare) => void;
+  onCancel: () => void;
+}) {
+  const initial = props.initial;
+  const [path, setPath] = createSignal(initial?.path ?? '');
+  const [name, setName] = createSignal(initial?.name ?? '');
+  const [guest, setGuest] = createSignal(initial?.access.kind === 'guest');
+  const [chosenUsers, setChosenUsers] = createSignal<string[]>(
+    initial?.access.kind === 'users' ? initial.access.users : [],
+  );
+  const [readOnly, setReadOnly] = createSignal(initial?.readOnly ?? false);
 
   const pickFolder = async () => {
     const folder = await chooseFolder();
@@ -83,9 +140,9 @@ function AddShare(props: { users: string[]; busy: boolean; onAdd: (share: SmbSha
   const toggleUser = (user: string, on: boolean) =>
     setChosenUsers((users) => (on ? [...users, user] : users.filter((other) => other !== user)));
 
-  const add = (event: SubmitEvent) => {
+  const submit = (event: SubmitEvent) => {
     event.preventDefault();
-    props.onAdd({
+    props.onSave({
       name: name().trim(),
       path: path(),
       readOnly: readOnly(),
@@ -94,7 +151,7 @@ function AddShare(props: { users: string[]; busy: boolean; onAdd: (share: SmbSha
   };
 
   return (
-    <form class="max-w-md space-y-4" onSubmit={add}>
+    <form class="max-w-md space-y-4" onSubmit={submit}>
       <Field label="Folder">
         <div class="flex gap-2">
           <input class={inputClass} value={path()} onInput={(e) => setPath(e.currentTarget.value)} />
@@ -138,9 +195,16 @@ function AddShare(props: { users: string[]; busy: boolean; onAdd: (share: SmbSha
         Read only
       </label>
 
-      <Button type="submit" variant="primary" disabled={props.busy || !path() || !name().trim()}>
-        Share
-      </Button>
+      <div class="flex gap-2">
+        <Button type="submit" variant="primary" disabled={props.busy || !path() || !name().trim()}>
+          {initial ? 'Save' : 'Share'}
+        </Button>
+        <Show when={initial}>
+          <Button disabled={props.busy} onClick={props.onCancel}>
+            Cancel
+          </Button>
+        </Show>
+      </div>
     </form>
   );
 }

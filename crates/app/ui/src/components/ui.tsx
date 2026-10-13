@@ -1,7 +1,7 @@
 // Small building blocks shared by every page.
 
 import type { JSX, ParentProps } from 'solid-js';
-import { createSignal, For, Show, splitProps } from 'solid-js';
+import { createMemo, createSignal, For, Show, splitProps } from 'solid-js';
 
 import { messageOf } from '../api';
 
@@ -150,4 +150,27 @@ export function ErrorText(props: { message: string | null }) {
       <p class="mt-2 text-danger">{props.message}</p>
     </Show>
   );
+}
+
+/**
+ * An "add or edit" form's bookkeeping: what's being edited (null when adding a
+ * new one), and `form()`, which changes whenever the form should start afresh
+ * (editing starts or ends, or a save goes through), for a keyed `<Show>` to
+ * rebuild it from.
+ */
+export function createEditing<T>() {
+  const [editing, setEditing] = createSignal<T | null>(null);
+  const [round, setRound] = createSignal(0);
+  const form = createMemo(() => ({ editing: editing(), round: round() }));
+
+  return {
+    editing,
+    form,
+    edit: (item: T) => setEditing(() => item),
+    /** Saved or cancelled: back to an empty form for adding. */
+    done: () => {
+      setEditing(null);
+      setRound((round) => round + 1);
+    },
+  };
 }

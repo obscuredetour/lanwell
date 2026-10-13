@@ -4,14 +4,40 @@ import { createSignal, Show } from 'solid-js';
 
 import { chooseFolder, type NfsExport, setNfsExports, type SystemInfo } from '../api';
 import { ServerStatus } from './ServerStatus';
-import { Button, createAction, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
+import { Button, createAction, createEditing, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
 
 export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChanged: () => void }) {
-  const action = createAction();
+  // Separate, so an error shows next to what caused it.
+  const listAction = createAction();
+  const formAction = createAction();
+  const exportForm = createEditing<NfsExport>();
+  let formTop: HTMLDivElement | undefined;
 
   /** Saves the whole list (the helper replaces what it had with it). */
-  const save = async (exports: NfsExport[]) => {
-    if (await action.run(() => setNfsExports(exports))) props.onChanged();
+  const save = async (action: ReturnType<typeof createAction>, exports: NfsExport[]) => {
+    const saved = await action.run(() => setNfsExports(exports));
+    if (saved) props.onChanged();
+    return saved;
+  };
+
+  /** A new export, or the one being edited (found by its folder, which is unique) changed. */
+  const saveExport = async (nfsExport: NfsExport) => {
+    const original = exportForm.editing();
+    const exports = original
+      ? props.exports.map((other) => (other.path === original.path ? nfsExport : other))
+      : [...props.exports, nfsExport];
+    if (await save(formAction, exports)) exportForm.done();
+  };
+
+  const stopEditing = () => {
+    formAction.reset();
+    exportForm.done();
+  };
+
+  const startEditing = (nfsExport: NfsExport) => {
+    formAction.reset();
+    exportForm.edit(nfsExport);
+    formTop?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
@@ -39,30 +65,52 @@ export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChang
                   {nfsExport.readOnly ? ' · read only' : ''}
                 </div>
               </div>
+              <Button disabled={listAction.busy()} onClick={() => startEditing(nfsExport)}>
+                Edit
+              </Button>
               <Button
                 variant="danger"
-                disabled={action.busy()}
-                onClick={() => save(props.exports.filter((other) => other !== nfsExport))}
+                disabled={listAction.busy()}
+                onClick={() =>
+                  save(
+                    listAction,
+                    props.exports.filter((other) => other !== nfsExport),
+                  )
+                }
               >
                 Stop exporting
               </Button>
             </>
           )}
         </ItemList>
-        <ErrorText message={action.error()} />
+        <ErrorText message={listAction.error()} />
       </Section>
 
-      <Section title="Export a folder">
-        <AddExport busy={action.busy()} onAdd={(nfsExport) => save([...props.exports, nfsExport])} />
-      </Section>
+      <div ref={formTop}>
+        <Section title={exportForm.editing() ? `Edit ${exportForm.editing()!.path}` : 'Export a folder'}>
+          <Show when={exportForm.form()} keyed>
+            {({ editing }) => (
+              <ExportForm initial={editing} busy={formAction.busy()} onSave={saveExport} onCancel={stopEditing} />
+            )}
+          </Show>
+          <ErrorText message={formAction.error()} />
+        </Section>
+      </div>
     </>
   );
 }
 
-function AddExport(props: { busy: boolean; onAdd: (nfsExport: NfsExport) => void }) {
-  const [path, setPath] = createSignal('');
-  const [clients, setClients] = createSignal('');
-  const [readOnly, setReadOnly] = createSignal(false);
+/** Adds an export, or edits `initial`. Starts from `initial`'s settings; rebuilt for each export. */
+function ExportForm(props: {
+  initial: NfsExport | null;
+  busy: boolean;
+  onSave: (nfsExport: NfsExport) => void;
+  onCancel: () => void;
+}) {
+  const initial = props.initial;
+  const [path, setPath] = createSignal(initial?.path ?? '');
+  const [clients, setClients] = createSignal(initial?.clients.join(' ') ?? '');
+  const [readOnly, setReadOnly] = createSignal(initial?.readOnly ?? false);
 
   const pickFolder = async () => {
     const folder = await chooseFolder();
@@ -75,13 +123,13 @@ function AddExport(props: { busy: boolean; onAdd: (nfsExport: NfsExport) => void
       .split(/[\s,]+/)
       .filter(Boolean);
 
-  const add = (event: SubmitEvent) => {
+  const submit = (event: SubmitEvent) => {
     event.preventDefault();
-    props.onAdd({ path: path(), readOnly: readOnly(), clients: clientList() });
+    props.onSave({ path: path(), readOnly: readOnly(), clients: clientList() });
   };
 
   return (
-    <form class="max-w-md space-y-4" onSubmit={add}>
+    <form class="max-w-md space-y-4" onSubmit={submit}>
       <Field label="Folder">
         <div class="flex gap-2">
           <input class={inputClass} value={path()} onInput={(e) => setPath(e.currentTarget.value)} />
@@ -108,9 +156,16 @@ function AddExport(props: { busy: boolean; onAdd: (nfsExport: NfsExport) => void
         </p>
       </Show>
 
-      <Button type="submit" variant="primary" disabled={props.busy || !path() || clientList().length === 0}>
-        Export
-      </Button>
+      <div class="flex gap-2">
+        <Button type="submit" variant="primary" disabled={props.busy || !path() || clientList().length === 0}>
+          {initial ? 'Save' : 'Export'}
+        </Button>
+        <Show when={initial}>
+          <Button disabled={props.busy} onClick={props.onCancel}>
+            Cancel
+          </Button>
+        </Show>
+      </div>
     </form>
   );
 }
