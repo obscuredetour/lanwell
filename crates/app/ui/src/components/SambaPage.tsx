@@ -3,6 +3,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 
 import { chooseFolder, localUsers, setSmbPassword, setSmbShares, type SmbShare, type SystemInfo } from '../api';
+import { ServerStatus } from './ServerStatus';
 import { Button, createAction, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
 
 export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChanged: () => void }) {
@@ -22,6 +23,8 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
           Macs and phones.
         </Notice>
       </Show>
+
+      <ServerStatus server="samba" shared={props.shares.length} />
 
       <Section title="Shared folders" description="Folders other computers can open over the network.">
         <ItemList items={props.shares} empty="No folders are shared yet.">

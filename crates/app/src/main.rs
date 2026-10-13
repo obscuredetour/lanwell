@@ -18,6 +18,7 @@ fn main() {
             commands::system_info,
             commands::load_state,
             commands::local_users,
+            commands::file_server_status,
             commands::helper_status,
             commands::install_helper,
             commands::uninstall_helper,

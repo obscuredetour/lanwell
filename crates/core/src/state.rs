@@ -14,6 +14,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::fileserver::FileServer;
 use crate::mount::{
     ManagedMount, Mount, MountWhen, Owner, RemoteShare, SmbAddress, SmbLogin, SmbVersion,
 };
@@ -28,6 +29,9 @@ pub struct State {
     pub nfs_exports: Vec<NfsExport>,
     /// Shares on other machines mounted here, SMB and NFS.
     pub mounts: Vec<ManagedMount>,
+    /// The file servers netfoo let through the firewall (so it only ever
+    /// takes back what it opened).
+    pub firewall_opened: Vec<FileServer>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -137,6 +141,7 @@ mod tests {
             }],
             nfs_exports: vec![],
             mounts: vec![],
+            firewall_opened: vec![],
         };
         std::fs::write(&path, state.to_json()).unwrap();
         assert_eq!(State::load(&path).unwrap(), state);

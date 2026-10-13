@@ -3,7 +3,7 @@
 //! Errors are returned as messages to show as they are.
 
 use netfoo_core::system::{self, HelperStatus, SystemInfo};
-use netfoo_core::{FoundServer, MountStatus, Request, State};
+use netfoo_core::{FileServer, FileServerStatus, FoundServer, MountStatus, Request, State};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::{discovery, mounts};
@@ -23,6 +23,16 @@ pub fn load_state() -> Result<State, String> {
 
     #[cfg(not(target_os = "linux"))]
     Ok(State::default())
+}
+
+/// Whether a file server is installed, running, and let through the firewall.
+#[tauri::command]
+pub async fn file_server_status(server: FileServer) -> Result<FileServerStatus, String> {
+    let opened_by_netfoo = load_state()?.firewall_opened.contains(&server);
+    // systemctl and firewall-cmd take a moment, so not on the UI's thread.
+    tauri::async_runtime::spawn_blocking(move || FileServerStatus::detect(server, opened_by_netfoo))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// The people with accounts here, who shares can be opened to.

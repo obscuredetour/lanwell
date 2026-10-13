@@ -10,8 +10,10 @@ use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use netfoo_core::linux::explain_mount_failure;
+use netfoo_core::linux::firewall::{ufw_commands, ufw_ipv6};
 use netfoo_core::system::find_program;
-use netfoo_core::{AbsolutePath, Secret, UserName};
+use netfoo_core::system::{detect_firewall, installed_unit};
+use netfoo_core::{AbsolutePath, FileServer, Firewall, Secret, UserName};
 
 use crate::files::find_symlink;
 use crate::users;
@@ -43,6 +45,12 @@ pub trait Services {
     /// The kernel's mount table (/proc/self/mountinfo), to tell which drive a
     /// folder is on.
     fn mount_table(&self) -> String;
+    /// Starts `server` and has it start with the computer (`running`), or
+    /// stops it and has it not. Does nothing if it isn't installed.
+    fn set_running(&self, server: FileServer, running: bool) -> Result<(), CommandError>;
+    /// Lets `server` through the firewall from the local network (`allow`),
+    /// or takes netfoo's rules for it out. Does nothing if no firewall is on.
+    fn set_firewall(&self, server: FileServer, allow: bool) -> Result<(), CommandError>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -57,26 +65,14 @@ pub enum CommandError {
 /// The real thing: runs the system's own tools.
 pub struct SystemServices;
 
-/// Samba's service is `smb` on Arch and Fedora and `smbd` on Debian and Ubuntu.
-const SAMBA_UNITS: [&str; 2] = ["smb.service", "smbd.service"];
-
 impl Services for SystemServices {
     fn reload_samba(&self) -> Result<(), CommandError> {
-        for unit in SAMBA_UNITS {
-            if run(
-                "systemctl",
-                &["show", "--property=LoadState", "--value", unit],
-                None,
-            )?
-            .trim()
-                == "loaded"
-            {
-                // "try": does nothing if Samba isn't running; it reads the new
-                // config when it's next started.
-                run("systemctl", &["try-reload-or-restart", unit], None)?;
-            }
+        match installed_unit(FileServer::Samba) {
+            // "try": does nothing if Samba isn't running; it reads the new
+            // config when it's next started.
+            Some(unit) => run("systemctl", &["try-reload-or-restart", "--", unit], None).map(drop),
+            None => Ok(()),
         }
-        Ok(())
     }
 
     fn reload_nfs_exports(&self) -> Result<(), CommandError> {
@@ -154,6 +150,44 @@ impl Services for SystemServices {
 
     fn mount_table(&self) -> String {
         std::fs::read_to_string("/proc/self/mountinfo").unwrap_or_default()
+    }
+
+    fn set_running(&self, server: FileServer, running: bool) -> Result<(), CommandError> {
+        let Some(unit) = installed_unit(server) else {
+            return Ok(());
+        };
+        let verb = if running { "enable" } else { "disable" };
+        run("systemctl", &[verb, "--now", "--", unit], None).map(drop)
+    }
+
+    fn set_firewall(&self, server: FileServer, allow: bool) -> Result<(), CommandError> {
+        match detect_firewall() {
+            Firewall::None => Ok(()),
+            Firewall::Ufw => {
+                let defaults = std::fs::read_to_string("/etc/default/ufw").unwrap_or_default();
+                for args in ufw_commands(server, allow, ufw_ipv6(&defaults)) {
+                    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+                    if let Err(e) = run("ufw", &args, None) {
+                        // Taking out a rule that's already gone is fine.
+                        if allow || !e.to_string().contains("non-existent") {
+                            return Err(e);
+                        }
+                    }
+                }
+                Ok(())
+            }
+            Firewall::Firewalld => {
+                let change = if allow {
+                    "--add-service"
+                } else {
+                    "--remove-service"
+                };
+                let change = format!("{change}={}", server.firewalld_service());
+                // Now, and from the next start of firewalld on.
+                run("firewall-cmd", &[&change], None)?;
+                run("firewall-cmd", &["--permanent", &change], None).map(drop)
+            }
+        }
     }
 }
 

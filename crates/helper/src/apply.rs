@@ -13,8 +13,8 @@ use netfoo_core::linux::mountinfo::mount_point_of;
 use netfoo_core::linux::{Paths, nfs, samba};
 use netfoo_core::state::StateError;
 use netfoo_core::{
-    AbsolutePath, InvalidValue, Owner, Request, State, check_nfs_exports, check_shareable,
-    check_smb_shares,
+    AbsolutePath, FileServer, InvalidValue, Owner, Request, State, check_nfs_exports,
+    check_shareable, check_smb_shares,
 };
 
 use crate::files::write_atomically;
@@ -57,6 +57,9 @@ pub fn apply(
             write(&paths.samba_shares, &samba::render_shares(shares))?;
             include_from_smb_conf(paths)?;
             write(&paths.state, &state.to_json())?;
+            if !shares.is_empty() {
+                services.set_running(FileServer::Samba, true)?;
+            }
             services.reload_samba()?;
         }
         Request::SetNfsExports { exports } => {
@@ -73,6 +76,9 @@ pub fn apply(
             let text = nfs::render_exports(exports, |export| drives[&export.path].clone());
             write(&paths.nfs_exports, &text)?;
             write(&paths.state, &state.to_json())?;
+            if !exports.is_empty() {
+                services.set_running(FileServer::Nfs, true)?;
+            }
             services.reload_nfs_exports()?;
         }
         Request::SetSmbPassword { user, password } => {
@@ -97,6 +103,25 @@ pub fn apply(
         }
         Request::RemoveMount { mount_point } => {
             mounts::remove(mount_point, paths, services)?;
+        }
+        Request::SetServerRunning { server, running } => {
+            services.set_running(*server, *running)?;
+        }
+        Request::SetFirewall { server, allow } => {
+            let mut state = State::load(&paths.state)?;
+            if !allow && !state.firewall_opened.contains(server) {
+                return Err(InvalidValue(format!(
+                    "netfoo didn't let {} through the firewall, so it leaves the firewall's rules alone.",
+                    server.name()
+                ))
+                .into());
+            }
+            services.set_firewall(*server, *allow)?;
+            state.firewall_opened.retain(|other| other != server);
+            if *allow {
+                state.firewall_opened.push(*server);
+            }
+            write(&paths.state, &state.to_json())?;
         }
     }
     Ok(())
@@ -237,6 +262,16 @@ mod tests {
         fn mount_table(&self) -> String {
             self.mount_table.clone()
         }
+        fn set_running(&self, server: FileServer, running: bool) -> Result<(), CommandError> {
+            let verb = if running { "start" } else { "stop" };
+            self.record(format!("{verb} {server:?}"));
+            Ok(())
+        }
+        fn set_firewall(&self, server: FileServer, allow: bool) -> Result<(), CommandError> {
+            let verb = if allow { "allow" } else { "disallow" };
+            self.record(format!("{verb} {server:?}"));
+            Ok(())
+        }
     }
 
     /// Applies `request` as Alice.
@@ -303,7 +338,7 @@ mod tests {
             State::load(&paths.state).unwrap().smb_shares,
             [media_share()]
         );
-        assert_eq!(services.log(), ["reload samba"]);
+        assert_eq!(services.log(), ["start Samba", "reload samba"]);
     }
 
     #[test]
@@ -344,7 +379,10 @@ mod tests {
         assert_eq!(state.nfs_exports, [export]);
         let nfs_exports = fs::read_to_string(&paths.nfs_exports).unwrap();
         assert!(nfs_exports.contains("/srv/media *(rw,"));
-        assert_eq!(services.log(), ["reload samba", "reload nfs"]);
+        assert_eq!(
+            services.log(),
+            ["start Samba", "reload samba", "start Nfs", "reload nfs"]
+        );
     }
 
     #[test]
@@ -727,5 +765,46 @@ mod tests {
         let result = run(request, &paths, &services);
         assert!(matches!(result, Err(ApplyError::Invalid(_))));
         assert!(services.log().is_empty());
+    }
+
+    #[test]
+    fn removing_every_share_leaves_samba_running() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+        run(Request::SetSmbShares { shares: vec![] }, &paths, &services).unwrap();
+        // Other shares (in smb.conf) may still need it; stopping it is a choice.
+        assert_eq!(services.log(), ["reload samba"]);
+    }
+
+    #[test]
+    fn netfoo_remembers_what_it_let_through() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+        let set = |allow| Request::SetFirewall {
+            server: FileServer::Nfs,
+            allow,
+        };
+
+        // Taking back what netfoo didn't open is refused.
+        assert!(matches!(
+            run(set(false), &paths, &services),
+            Err(ApplyError::Invalid(_))
+        ));
+
+        run(set(true), &paths, &services).unwrap();
+        assert_eq!(
+            State::load(&paths.state).unwrap().firewall_opened,
+            [FileServer::Nfs]
+        );
+        run(set(false), &paths, &services).unwrap();
+        assert!(
+            State::load(&paths.state)
+                .unwrap()
+                .firewall_opened
+                .is_empty()
+        );
+        assert_eq!(services.log(), ["allow Nfs", "disallow Nfs"]);
     }
 }

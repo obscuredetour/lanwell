@@ -84,6 +84,24 @@ app, and the folders above it, are owned by root and writable by no one else
 it, and the app's "different build" check would ask them to install it.
 Development builds (`target/debug`) are exempt.
 
+## Running the servers
+
+Saving shares or exports starts the server they need, and has it start with
+the computer (`systemctl enable --now`), if it's installed: Samba is `smb` on
+Arch and Fedora and `smbd` on Debian and Ubuntu; the NFS server is
+`nfs-server`. Removing every share leaves it running, since shares set up by
+hand may need it; the Samba and NFS pages show its state with Start and Stop.
+
+Opening the firewall is the person's choice, not a side effect: those pages
+say when the firewall blocks the server, and offer **Allow from local
+network**. With ufw that's one rule per private address range (10.x,
+172.16–31.x, 192.168.x, and IPv6's local ranges if ufw handles IPv6), only
+for the server's port (445 for SMB, 2049 for NFS 4), commented `netfoo`.
+With firewalld it's the `samba` or `nfs` service in the default zone, whose
+trust level decides who's let in. netfoo records what it opened, and
+**Stop allowing** only takes that back. The status is read without root:
+ufw's saved rules where they're readable, `firewall-cmd --query-service`.
+
 ## Sharing safely
 
 Shares and exports of system folders (`/`, /etc, ...) are refused, checked
@@ -188,22 +206,19 @@ The core and UI carry over; the helper and the config rendering don't.
 
 ## Roadmap
 
-1. **Running the services**: start and enable Samba/NFS when the first share
-   is added (today the helper only reloads them if they're already running),
-   and open the firewall (firewalld's D-Bus API, or ufw).
-2. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
+1. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
 
-3. **Editing** a share in place (today: remove and add again).
-4. **Share-only users**: a user name and password for a share, separate from
+2. **Editing** a share in place (today: remove and add again).
+3. **Share-only users**: a user name and password for a share, separate from
    anyone's login, and unable to log in. Files they write are owned by the
    folder's owner (`force user`), so permissions stay as they were.
-5. **Packaging**: AUR first, then deb and rpm, each installing the helper
+4. **Packaging**: AUR first, then deb and rpm, each installing the helper
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
    there, and the root-ownership check above has to come first
    ([issue #1](https://github.com/obscuredetour/netfoo/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
-6. **macOS, later, if people want it.** macOS already shares and mounts SMB
+5. **macOS, later, if people want it.** macOS already shares and mounts SMB
    from its own settings, so netfoo would add little there for a lot of work:
    a signed, notarized helper (see "macOS (later, if wanted)" above). Its
    real gap is NFS exports, which have no GUI. The shared core and per-OS
@@ -224,6 +239,10 @@ The core and UI carry over; the helper and the config rendering don't.
   didn't come from a package (a development build, a downloaded bundle) can
   be set up with one button and the system's password prompt. One install
   path, `netfoo-helper install`, serves the button and the dev script.
+- **2026-10-11: Opening the firewall asks.** Starting a server when
+  something's shared is what sharing means; letting it through the firewall
+  is a separate choice (a laptop's firewall also guards it on others'
+  networks), so it's a button, and then only to the local network.
 - **2026-10-11: One mount type for both protocols.** A mount is a folder
   plus a remote share, SMB or NFS, so ownership checks, units, status and
   hardening are written once. State files from before (`smbMounts`) are

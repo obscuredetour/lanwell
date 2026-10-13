@@ -3,6 +3,7 @@
 import { createSignal, Show } from 'solid-js';
 
 import { chooseFolder, type NfsExport, setNfsExports, type SystemInfo } from '../api';
+import { ServerStatus } from './ServerStatus';
 import { Button, createAction, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
 
 export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChanged: () => void }) {
@@ -21,6 +22,8 @@ export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChang
           <code>nfs-kernel-server</code>) package to export folders over NFS.
         </Notice>
       </Show>
+
+      <ServerStatus server="nfs" shared={props.exports.length} />
 
       <Section
         title="Exported folders"

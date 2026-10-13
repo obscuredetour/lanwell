@@ -9,6 +9,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::bus::actions;
+use crate::fileserver::FileServer;
 use crate::mount::Mount;
 use crate::names::{AbsolutePath, UserName};
 use crate::share::{NfsExport, SmbShare};
@@ -41,13 +42,22 @@ pub enum Request {
     },
     /// Unmount the share on this folder and stop mounting it. The folder stays.
     RemoveMount { mount_point: AbsolutePath },
+    /// Start a file server and have it start with the computer, or stop it
+    /// and have it not.
+    SetServerRunning { server: FileServer, running: bool },
+    /// Let a file server through the firewall from the local network, or
+    /// take back what netfoo let through.
+    SetFirewall { server: FileServer, allow: bool },
 }
 
 impl Request {
     /// The polkit action that allows this request (see `crates/helper/linux/io.netfoo.policy`).
     pub fn action(&self) -> &'static str {
         match self {
-            Request::SetSmbShares { .. } | Request::SetNfsExports { .. } => actions::MANAGE_SHARES,
+            Request::SetSmbShares { .. }
+            | Request::SetNfsExports { .. }
+            | Request::SetServerRunning { .. }
+            | Request::SetFirewall { .. } => actions::MANAGE_SHARES,
             Request::SetSmbPassword { .. } => actions::SET_PASSWORD,
             Request::SetMount { .. } | Request::RemoveMount { .. } => actions::MANAGE_MOUNTS,
         }

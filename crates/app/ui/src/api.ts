@@ -5,6 +5,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 
+import type { FileServer } from './bindings/FileServer';
+import type { FileServerStatus } from './bindings/FileServerStatus';
 import type { FoundServer } from './bindings/FoundServer';
 import type { HelperStatus } from './bindings/HelperStatus';
 import type { ManagedMount } from './bindings/ManagedMount';
@@ -16,12 +18,27 @@ import type { SmbShare } from './bindings/SmbShare';
 import type { State } from './bindings/State';
 import type { SystemInfo } from './bindings/SystemInfo';
 
-export type { FoundServer, HelperStatus, ManagedMount, Mount, MountStatus, NfsExport, SmbShare, State, SystemInfo };
+export type {
+  FileServer,
+  FileServerStatus,
+  FoundServer,
+  HelperStatus,
+  ManagedMount,
+  Mount,
+  MountStatus,
+  NfsExport,
+  SmbShare,
+  State,
+  SystemInfo,
+};
 
 export const systemInfo = () => invoke<SystemInfo>('system_info');
 
 /** Everything netfoo manages (read without a password). */
 export const loadState = () => invoke<State>('load_state');
+
+/** Whether Samba or the NFS server is installed, running, and let through the firewall. */
+export const fileServerStatus = (server: FileServer) => invoke<FileServerStatus>('file_server_status', { server });
 
 /** People with accounts on this machine. */
 export const localUsers = () => invoke<string[]>('local_users');
@@ -45,6 +62,13 @@ export const setSmbShares = (shares: SmbShare[]) => apply({ kind: 'setSmbShares'
 
 /** Replaces every NFS export netfoo manages. */
 export const setNfsExports = (exports: NfsExport[]) => apply({ kind: 'setNfsExports', exports });
+
+/** Starts a file server and has it start with the computer, or stops it and has it not. */
+export const setServerRunning = (server: FileServer, running: boolean) =>
+  apply({ kind: 'setServerRunning', server, running });
+
+/** Lets a file server through the firewall from the local network, or takes back what netfoo let through. */
+export const setFirewall = (server: FileServer, allow: boolean) => apply({ kind: 'setFirewall', server, allow });
 
 /** Sets a user's Samba password (separate from their login password). */
 export const setSmbPassword = (user: string, password: string) => apply({ kind: 'setSmbPassword', user, password });

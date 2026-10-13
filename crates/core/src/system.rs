@@ -1,8 +1,13 @@
 //! What's installed on this machine. Everything here is read without root.
 
+use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 use serde::Serialize;
+
+use crate::fileserver::{FileServer, FileServerStatus, Firewall, FirewallAccess};
+use crate::linux::firewall;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -137,6 +142,99 @@ fn user_id() -> Option<u32> {
     None
 }
 
+/// The systemd unit that runs `server` here, if it's installed.
+pub fn installed_unit(server: FileServer) -> Option<&'static str> {
+    server
+        .units()
+        .iter()
+        .copied()
+        .find(|unit| systemctl_property(unit, "LoadState").as_deref() == Some("loaded"))
+}
+
+/// One property of a unit, as `systemctl show` reports it (no root needed).
+fn systemctl_property(unit: &str, property: &str) -> Option<String> {
+    let property = format!("--property={property}");
+    let output = Command::new("systemctl")
+        .args(["show", &property, "--value", "--", unit])
+        .output()
+        .ok()?;
+    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+/// The firewall in charge: firewalld if it's running, otherwise ufw if it's
+/// switched on.
+pub fn detect_firewall() -> Firewall {
+    if systemctl_property("firewalld.service", "ActiveState").as_deref() == Some("active") {
+        return Firewall::Firewalld;
+    }
+    let ufw_on = find_program("ufw").is_some()
+        && fs::read_to_string("/etc/ufw/ufw.conf").is_ok_and(|conf| firewall::ufw_enabled(&conf));
+    if ufw_on {
+        Firewall::Ufw
+    } else {
+        Firewall::None
+    }
+}
+
+impl FileServerStatus {
+    /// What `server` is doing now. `opened_by_netfoo` is whether netfoo's state
+    /// says it let it through the firewall.
+    pub fn detect(server: FileServer, opened_by_netfoo: bool) -> Self {
+        let unit = installed_unit(server);
+        let property = |name| unit.and_then(|unit| systemctl_property(unit, name));
+        let firewall = detect_firewall();
+        let access = match firewall {
+            // Nothing in the way.
+            Firewall::None => FirewallAccess::Allowed { by_netfoo: false },
+            Firewall::Ufw => ufw_access(server, opened_by_netfoo),
+            Firewall::Firewalld => firewalld_access(server, opened_by_netfoo),
+        };
+        Self {
+            installed: unit.is_some(),
+            running: property("ActiveState").as_deref() == Some("active"),
+            enabled: property("UnitFileState").as_deref() == Some("enabled"),
+            firewall,
+            access,
+        }
+    }
+}
+
+/// From ufw's saved rules, where they can be read (some distributions keep
+/// them from everyone but root).
+fn ufw_access(server: FileServer, by_netfoo: bool) -> FirewallAccess {
+    let rules: Vec<String> = ["/etc/ufw/user.rules", "/etc/ufw/user6.rules"]
+        .iter()
+        .filter_map(|path| fs::read_to_string(path).ok())
+        .collect();
+    if rules.is_empty() {
+        FirewallAccess::Unknown
+    } else if rules
+        .iter()
+        .any(|rules| firewall::ufw_allows(rules, server.port()))
+    {
+        FirewallAccess::Allowed { by_netfoo }
+    } else {
+        FirewallAccess::Blocked
+    }
+}
+
+/// From `firewall-cmd --query-service`, which says yes (0) or no (1).
+fn firewalld_access(server: FileServer, by_netfoo: bool) -> FirewallAccess {
+    let Some(firewall_cmd) = find_program("firewall-cmd") else {
+        return FirewallAccess::Unknown;
+    };
+    let query = format!("--query-service={}", server.firewalld_service());
+    match Command::new(firewall_cmd)
+        .arg(query)
+        .output()
+        .map(|output| output.status.code())
+    {
+        Ok(Some(0)) => FirewallAccess::Allowed { by_netfoo },
+        Ok(Some(1)) => FirewallAccess::Blocked,
+        _ => FirewallAccess::Unknown,
+    }
+}
+
 /// Where a system program is installed. Looks in the standard directories
 /// rather than `PATH`, since `sbin` often isn't on a user's `PATH`.
 pub fn find_program(name: &str) -> Option<std::path::PathBuf> {
@@ -188,5 +286,16 @@ mod tests {
                       nobody:x:65534:65534::/:/usr/bin/nologin\n\
                       bob:x:1001:1001::/home/bob:/bin/bash\n";
         assert_eq!(parse_local_users(passwd), ["alice", "bob"]);
+    }
+
+    /// Prints what this machine's file servers and firewall are doing. Reads
+    /// the real system, so it only runs when asked:
+    /// `cargo test -p netfoo-core -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn file_servers_on_this_machine() {
+        for server in FileServer::ALL {
+            println!("{server:?}: {:?}", FileServerStatus::detect(server, false));
+        }
     }
 }
