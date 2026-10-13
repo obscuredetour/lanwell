@@ -3,7 +3,7 @@
 use crate::linux::GENERATED_HEADER;
 use crate::share::NfsExport;
 
-/// The contents of netfoo's exports file (`/etc/exports.d/netfoo.exports`):
+/// The contents of lanwell's exports file (`/etc/exports.d/lanwell.exports`):
 /// one line per export.
 ///
 /// `drive_of` says which drive an export is on: its mount point, or `None` if

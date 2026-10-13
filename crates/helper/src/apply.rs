@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 
-use netfoo_core::linux::mountinfo::mount_point_of;
-use netfoo_core::linux::{Paths, nfs, samba};
-use netfoo_core::state::StateError;
-use netfoo_core::{
+use lanwell_core::linux::mountinfo::mount_point_of;
+use lanwell_core::linux::{Paths, nfs, samba};
+use lanwell_core::state::StateError;
+use lanwell_core::{
     AbsolutePath, FileServer, InvalidValue, Owner, Request, State, check_nfs_exports,
     check_shareable, check_smb_shares,
 };
@@ -111,7 +111,7 @@ pub fn apply(
             let mut state = State::load(&paths.state)?;
             if !allow && !state.firewall_opened.contains(server) {
                 return Err(InvalidValue(format!(
-                    "netfoo didn't let {} through the firewall, so it leaves the firewall's rules alone.",
+                    "lanwell didn't let {} through the firewall, so it leaves the firewall's rules alone.",
                     server.name()
                 ))
                 .into());
@@ -155,7 +155,7 @@ fn drive_of(path: &AbsolutePath, mount_table: &str) -> Result<Option<String>, Ap
     Ok((drive != "/").then_some(drive))
 }
 
-/// Makes sure smb.conf includes netfoo's shares, creating smb.conf if the
+/// Makes sure smb.conf includes lanwell's shares, creating smb.conf if the
 /// system doesn't have one.
 fn include_from_smb_conf(paths: &Paths) -> Result<(), ApplyError> {
     let include_path = paths.samba_shares.to_string_lossy();
@@ -188,7 +188,7 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
-    use netfoo_core::{
+    use lanwell_core::{
         AbsolutePath, Mount, MountWhen, NfsAddress, NfsClient, NfsExport, NfsVersion, RemoteName,
         RemoteShare, Secret, ShareName, SmbAccess, SmbAddress, SmbLogin, SmbShare, SmbVersion,
         UserName,
@@ -205,7 +205,7 @@ mod tests {
     #[derive(Default)]
     struct Recorded {
         log: RefCell<Vec<String>>,
-        /// Units that exist without netfoo (an admin's, or mounted now).
+        /// Units that exist without lanwell (an admin's, or mounted now).
         units_in_use: Vec<String>,
         /// /proc/self/mountinfo, as far as the test needs it.
         mount_table: String,
@@ -567,7 +567,7 @@ mod tests {
     }
 
     #[test]
-    fn mounts_netfoo_did_not_make_are_left_alone() {
+    fn mounts_lanwell_did_not_make_are_left_alone() {
         let root = tempfile::tempdir().unwrap();
         let paths = Paths::under(root.path());
         let services = Recorded {
@@ -753,7 +753,7 @@ mod tests {
     }
 
     #[test]
-    fn only_netfoo_mounts_can_be_moved() {
+    fn only_lanwell_mounts_can_be_moved() {
         let root = tempfile::tempdir().unwrap();
         let paths = Paths::under(root.path());
         let services = Recorded::default();
@@ -778,7 +778,7 @@ mod tests {
     }
 
     #[test]
-    fn netfoo_remembers_what_it_let_through() {
+    fn lanwell_remembers_what_it_let_through() {
         let root = tempfile::tempdir().unwrap();
         let paths = Paths::under(root.path());
         let services = Recorded::default();
@@ -787,7 +787,7 @@ mod tests {
             allow,
         };
 
-        // Taking back what netfoo didn't open is refused.
+        // Taking back what lanwell didn't open is refused.
         assert!(matches!(
             run(set(false), &paths, &services),
             Err(ApplyError::Invalid(_))

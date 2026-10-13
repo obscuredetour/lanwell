@@ -9,11 +9,11 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use netfoo_core::linux::explain_mount_failure;
-use netfoo_core::linux::firewall::{ufw_commands, ufw_ipv6};
-use netfoo_core::system::find_program;
-use netfoo_core::system::{detect_firewall, installed_unit};
-use netfoo_core::{AbsolutePath, FileServer, Firewall, Secret, UserName};
+use lanwell_core::linux::explain_mount_failure;
+use lanwell_core::linux::firewall::{ufw_commands, ufw_ipv6};
+use lanwell_core::system::find_program;
+use lanwell_core::system::{detect_firewall, installed_unit};
+use lanwell_core::{AbsolutePath, FileServer, Firewall, Secret, UserName};
 
 use crate::files::find_symlink;
 use crate::users;
@@ -34,7 +34,7 @@ pub trait Services {
     /// Starts `unit` now. If it's a mount that fails, says why.
     fn start(&self, unit: &str) -> Result<(), CommandError>;
     /// Whether `unit` is set up or active: a unit file anywhere, or a mount
-    /// that's mounted now. Used to leave alone mounts netfoo didn't make.
+    /// that's mounted now. Used to leave alone mounts lanwell didn't make.
     fn unit_in_use(&self, unit: &str) -> bool;
     /// Makes sure a share can be mounted on `path`: refuses it if any part of
     /// it is a symbolic link, or if it has files in it (mounting would hide
@@ -49,7 +49,7 @@ pub trait Services {
     /// stops it and has it not. Does nothing if it isn't installed.
     fn set_running(&self, server: FileServer, running: bool) -> Result<(), CommandError>;
     /// Lets `server` through the firewall from the local network (`allow`),
-    /// or takes netfoo's rules for it out. Does nothing if no firewall is on.
+    /// or takes lanwell's rules for it out. Does nothing if no firewall is on.
     fn set_firewall(&self, server: FileServer, allow: bool) -> Result<(), CommandError>;
 }
 
@@ -57,7 +57,7 @@ pub trait Services {
 pub enum CommandError {
     #[error("{program}: {message}")]
     Failed { program: String, message: String },
-    /// A failure netfoo can put in plain words.
+    /// A failure lanwell can put in plain words.
     #[error("{0}")]
     Explained(String),
 }

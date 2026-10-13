@@ -1,6 +1,6 @@
-//! netfoo's desktop app. The commands here are thin: what a share is lives in
-//! netfoo-core, and every change is made by the privileged helper
-//! (netfoo-helper), which this process asks over D-Bus.
+//! lanwell's desktop app. The commands here are thin: what a share is lives in
+//! lanwell-core, and every change is made by the privileged helper
+//! (lanwell-helper), which this process asks over D-Bus.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -30,5 +30,5 @@ fn main() {
             commands::open_mount,
         ])
         .run(tauri::generate_context!())
-        .expect("netfoo couldn't start");
+        .expect("lanwell couldn't start");
 }

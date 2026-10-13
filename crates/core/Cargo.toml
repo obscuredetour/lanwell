@@ -1,9 +1,9 @@
 [package]
-name = "netfoo-core"
+name = "lanwell-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "netfoo's model of shares, the requests the helper accepts, and the config files it writes"
+description = "lanwell's model of shares, the requests the helper accepts, and the config files it writes"
 publish = false
 
 [features]

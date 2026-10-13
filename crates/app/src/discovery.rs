@@ -6,8 +6,8 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
+use lanwell_core::{FoundServer, Protocol};
 use mdns_sd::{ServiceDaemon, ServiceEvent};
-use netfoo_core::{FoundServer, Protocol};
 
 /// The service types servers announce, and what each means.
 const SERVICES: [(&str, Protocol); 2] = [
@@ -75,7 +75,7 @@ mod tests {
     }
 
     /// Lists what's on the network this runs on. Needs a real network, so it
-    /// only runs when asked: `cargo test -p netfoo -- --ignored --nocapture`.
+    /// only runs when asked: `cargo test -p lanwell -- --ignored --nocapture`.
     #[test]
     #[ignore]
     fn finds_servers_on_this_network() {

@@ -1,4 +1,4 @@
-//! The file servers netfoo shares through (Samba and the NFS server): which
+//! The file servers lanwell shares through (Samba and the NFS server): which
 //! systemd unit runs each, and what the firewall has to let through.
 
 use serde::{Deserialize, Serialize};
@@ -83,9 +83,9 @@ pub enum Firewall {
     rename_all_fields = "camelCase"
 )]
 pub enum FirewallAccess {
-    /// Let through: by netfoo (which can take it back), or by some other rule.
+    /// Let through: by lanwell (which can take it back), or by some other rule.
     Allowed {
-        by_netfoo: bool,
+        by_lanwell: bool,
     },
     Blocked,
     /// The firewall's rules couldn't be read without root.
@@ -98,10 +98,10 @@ mod tests {
 
     #[test]
     fn json_shape() {
-        let access = FirewallAccess::Allowed { by_netfoo: true };
+        let access = FirewallAccess::Allowed { by_lanwell: true };
         assert_eq!(
             serde_json::to_string(&access).unwrap(),
-            r#"{"kind":"allowed","byNetfoo":true}"#
+            r#"{"kind":"allowed","byLanwell":true}"#
         );
     }
 }

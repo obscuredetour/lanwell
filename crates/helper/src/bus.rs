@@ -4,9 +4,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use netfoo_core::bus::{BUS_NAME, OBJECT_PATH};
-use netfoo_core::linux::Paths;
-use netfoo_core::{Owner, Request};
+use lanwell_core::bus::{BUS_NAME, OBJECT_PATH};
+use lanwell_core::linux::Paths;
+use lanwell_core::{Owner, Request};
 use zbus::fdo;
 use zbus::message::Header;
 use zbus::names::UniqueName;
@@ -49,9 +49,9 @@ struct Helper {
     applying: Mutex<()>,
 }
 
-#[zbus::interface(name = "io.netfoo.Helper1")]
+#[zbus::interface(name = "io.lanwell.Helper1")]
 impl Helper {
-    /// Applies `request`, a JSON-encoded `netfoo_core::Request`, if polkit
+    /// Applies `request`, a JSON-encoded `lanwell_core::Request`, if polkit
     /// allows the caller to.
     ///
     /// JSON rather than D-Bus types: the app and the helper share the Rust

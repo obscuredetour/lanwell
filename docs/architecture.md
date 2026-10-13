@@ -1,6 +1,6 @@
-# netfoo architecture
+# lanwell architecture
 
-netfoo is a desktop app for mounting other machines' shares (SMB, as
+lanwell is a desktop app for mounting other machines' shares (SMB, as
 folders here) and for sharing folders on the network (Samba and NFS). This document records how
 the pieces fit and why. Change the decisions at the end deliberately, and
 update this file when you do.
@@ -9,7 +9,7 @@ update this file when you do.
 
 - **Plain-language network sharing**: no smb.conf, /etc/exports or fstab
   knowledge needed.
-- **Never break a hand-configured system.** netfoo writes files of its own and
+- **Never break a hand-configured system.** lanwell writes files of its own and
   leaves everyone else's alone (one `include` line in smb.conf is the only
   exception).
 - **Honest about the protocols.** Samba has users and passwords; NFS trusts
@@ -21,12 +21,12 @@ update this file when you do.
 
 ```
 crates/
-  core     netfoo-core: the model (shares, exports), validated names, the requests the
+  core     lanwell-core: the model (shares, exports), validated names, the requests the
            helper accepts, the state file, and rendering the config files. No I/O beyond
            reading files; no root; no D-Bus. Everything here is unit-tested.
-  helper   netfoo-helper: the only part that runs as root. A system D-Bus service that
+  helper   lanwell-helper: the only part that runs as root. A system D-Bus service that
            checks each request with polkit, then applies it: writes config, reloads services.
-           `netfoo-helper install` puts it in place (the app's Install button runs it).
+           `lanwell-helper install` puts it in place (the app's Install button runs it).
     linux/   The D-Bus, systemd and polkit files that install it.
   app      The desktop app (Tauri 2). Thin commands over core; changes go to the helper.
     ui/      Solid + TypeScript + Tailwind v4. Talks to the backend only through api.ts.
@@ -60,19 +60,19 @@ UI (api.ts) ──invoke──▶ app (commands.rs) ──D-Bus: Apply(json)─�
 ```
 
 - The helper is started by D-Bus on first use and exits after two idle minutes.
-- Each kind of request has its own polkit action (`io.netfoo.manage-shares`,
-  `io.netfoo.set-password`), so an administrator can allow one without the other.
+- Each kind of request has its own polkit action (`io.lanwell.manage-shares`,
+  `io.lanwell.set-password`), so an administrator can allow one without the other.
 - Requests are applied one at a time.
 
 ## Installing the helper
 
 A package installs the helper and its D-Bus, systemd and polkit files. A
-netfoo that didn't come from one installs them itself: when
-`netfoo-helper --version` (run as the user) is missing or names another
+lanwell that didn't come from one installs them itself: when
+`lanwell-helper --version` (run as the user) is missing or names another
 version, the app offers an Install (or Update) button, which runs
-`pkexec netfoo-helper install` with the helper that sits beside the app's own
+`pkexec lanwell-helper install` with the helper that sits beside the app's own
 binary. pkexec shows the desktop's password prompt; the helper then copies
-itself to `/usr/lib/netfoo` and writes the files, which are built into it.
+itself to `/usr/lib/lanwell` and writes the files, which are built into it.
 
 pkexec runs that binary as root, so it must come from the same place as the
 app: anyone who could replace it could replace the app too. Once installed,
@@ -96,9 +96,9 @@ Opening the firewall is the person's choice, not a side effect: those pages
 say when the firewall blocks the server, and offer **Allow from local
 network**. With ufw that's one rule per private address range (10.x,
 172.16–31.x, 192.168.x, and IPv6's local ranges if ufw handles IPv6), only
-for the server's port (445 for SMB, 2049 for NFS 4), commented `netfoo`.
+for the server's port (445 for SMB, 2049 for NFS 4), commented `lanwell`.
 With firewalld it's the `samba` or `nfs` service in the default zone, whose
-trust level decides who's let in. netfoo records what it opened, and
+trust level decides who's let in. lanwell records what it opened, and
 **Stop allowing** only takes that back. The status is read without root:
 ufw's saved rules where they're readable, `firewall-cmd --query-service`.
 
@@ -118,17 +118,17 @@ only be set for people's accounts (UID 1000 and up), not root or system ones.
 The app warns before exporting read-write over NFS to every machine (`*`),
 since NFS trusts what each client says about who its users are.
 
-## Files netfoo owns (Linux)
+## Files lanwell owns (Linux)
 
 | File | What it is |
 |---|---|
-| `/etc/netfoo/state.json` | The source of truth: every share and export netfoo manages. World-readable, no secrets, so the app reads it without a password. |
-| `/etc/samba/netfoo.conf` | Generated share sections. Included from smb.conf. |
-| `/etc/exports.d/netfoo.exports` | Generated exports. `exportfs` reads every file in exports.d. |
-| `/etc/samba/smb.conf` | Not netfoo's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), netfoo writes a minimal one, which is the user's from then on. |
+| `/etc/lanwell/state.json` | The source of truth: every share and export lanwell manages. World-readable, no secrets, so the app reads it without a password. |
+| `/etc/samba/lanwell.conf` | Generated share sections. Included from smb.conf. |
+| `/etc/exports.d/lanwell.exports` | Generated exports. `exportfs` reads every file in exports.d. |
+| `/etc/samba/smb.conf` | Not lanwell's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), lanwell writes a minimal one, which is the user's from then on. |
 | `/etc/systemd/system/<mount point>.mount` | A mount, as a systemd unit named after its folder (`systemd-escape --path`). |
 | `/etc/systemd/system/<mount point>.automount` | For a mount that waits to be opened: mounts it on first access. |
-| `/etc/netfoo/credentials/<mount point>` | A mount's user name and password, for mount.cifs. Mode 600, in a 700 folder: only root can read them. Never in the state file. |
+| `/etc/lanwell/credentials/<mount point>` | A mount's user name and password, for mount.cifs. Mode 600, in a 700 folder: only root can read them. Never in the state file. |
 
 Generated files are never parsed back: they're rewritten from the state file
 on every change, and say so at the top.
@@ -147,8 +147,8 @@ person's choice:
 
 - **When first opened** (the default): an `.automount` unit is enabled, and
   the share mounts when something opens the folder. Startup never waits for
-  the server. netfoo also mounts it once straight away, so a wrong password
-  shows up while the person is still in netfoo.
+  the server. lanwell also mounts it once straight away, so a wrong password
+  shows up while the person is still in lanwell.
 - **At startup**: the `.mount` unit is enabled itself (`WantedBy=remote-fs.target`).
   Startup waits for the server, up to `TimeoutSec=30`, every time it's off;
   the UI says so before it's chosen.
@@ -200,7 +200,7 @@ The core and UI carry over; the helper and the config rendering don't.
   Exporting privacy-protected folders needs Full Disk Access for `/sbin/nfsd`.
 - **The helper** would be a launchd daemon registered with `SMAppService` and
   reached over XPC, which needs a signed, notarized app. The requests stay
-  the same `netfoo_core::Request`; only the transport changes.
+  the same `lanwell_core::Request`; only the transport changes.
 - **Mounting** needs no helper at all: the NetFS framework mounts as the user,
   with credentials in the Keychain.
 
@@ -213,15 +213,15 @@ The core and UI carry over; the helper and the config rendering don't.
    itself. A release bundle needs the helper beside the app (a Tauri
    sidecar) for the Install button; today only `cargo tauri dev` builds it
    there, and the root-ownership check above has to come first
-   ([issue #1](https://github.com/obscuredetour/netfoo/issues/1)). Flatpak's
+   ([issue #1](https://github.com/obscuredetour/lanwell/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
 3. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
-   Not urgent: no one working on netfoo has a Windows PC to test with. When
+   Not urgent: no one working on lanwell has a Windows PC to test with. When
    it's requested or built, it will need someone with one to help test (a
-   PC sharing a folder on the same network as netfoo).
+   PC sharing a folder on the same network as lanwell).
 
 4. **macOS, later, if people want it.** macOS already shares and mounts SMB
-   from its own settings, so netfoo would add little there for a lot of work:
+   from its own settings, so lanwell would add little there for a lot of work:
    a signed, notarized helper (see "macOS (later, if wanted)" above). Its
    real gap is NFS exports, which have no GUI. The shared core and per-OS
    helpers keep the door open.
@@ -233,14 +233,14 @@ The core and UI carry over; the helper and the config rendering don't.
   validation happens as it's decoded. D-Bus-native types would duplicate the
   model for no gain while both ends are ours.
 - **2026-10-11: A state file, not parsing config.** Parsing smb.conf and
-  exports back is fragile and would tempt netfoo to edit what it didn't write.
+  exports back is fragile and would tempt lanwell to edit what it didn't write.
 - **2026-10-11: polkit via D-Bus, not pkexec.** pkexec runs a whole program as
   root with arguments the caller chose; a D-Bus service accepts only its typed
   requests and identifies the caller race-free.
-- **2026-10-11: The helper installs itself, with pkexec.** So a netfoo that
+- **2026-10-11: The helper installs itself, with pkexec.** So a lanwell that
   didn't come from a package (a development build, a downloaded bundle) can
   be set up with one button and the system's password prompt. One install
-  path, `netfoo-helper install`, serves the button and the dev script.
+  path, `lanwell-helper install`, serves the button and the dev script.
 - **2026-10-11: Opening the firewall asks.** Starting a server when
   something's shared is what sharing means; letting it through the firewall
   is a separate choice (a laptop's firewall also guards it on others'

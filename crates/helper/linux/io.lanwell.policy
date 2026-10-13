@@ -2,14 +2,14 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
   "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!--
-  What netfoo's helper may do, and who may ask it to. By default every change
+  What lanwell's helper may do, and who may ask it to. By default every change
   needs an administrator's password, remembered for a few minutes
   (auth_admin_keep). Administrators can change that with a polkit rule.
 -->
 <policyconfig>
-  <vendor>netfoo</vendor>
+  <vendor>lanwell</vendor>
 
-  <action id="io.netfoo.manage-shares">
+  <action id="io.lanwell.manage-shares">
     <description>Share folders on the network</description>
     <message>Authentication is required to change which folders are shared on the network.</message>
     <defaults>
@@ -19,7 +19,7 @@
     </defaults>
   </action>
 
-  <action id="io.netfoo.manage-mounts">
+  <action id="io.lanwell.manage-mounts">
     <description>Mount network shares</description>
     <message>Authentication is required to change which network shares are mounted on this computer.</message>
     <defaults>
@@ -29,7 +29,7 @@
     </defaults>
   </action>
 
-  <action id="io.netfoo.set-password">
+  <action id="io.lanwell.set-password">
     <description>Set a file sharing password</description>
     <message>Authentication is required to set a user's file sharing password.</message>
     <defaults>

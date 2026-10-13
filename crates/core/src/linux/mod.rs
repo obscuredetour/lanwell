@@ -1,6 +1,6 @@
-//! The Linux config files netfoo writes, and where they live.
+//! The Linux config files lanwell writes, and where they live.
 //!
-//! netfoo writes only files of its own, plus one `include` line in smb.conf.
+//! lanwell writes only files of its own, plus one `include` line in smb.conf.
 //! Everything else in the system's config is left as it was.
 
 pub mod cifs;
@@ -19,21 +19,21 @@ pub fn explain_mount_failure(log: &str) -> Option<String> {
 
 use std::path::{Path, PathBuf};
 
-/// Where the helper is installed: by a package, or by `netfoo-helper install`
+/// Where the helper is installed: by a package, or by `lanwell-helper install`
 /// (the app's Install button). The D-Bus and systemd files name this path.
-pub const HELPER_PATH: &str = "/usr/lib/netfoo/netfoo-helper";
+pub const HELPER_PATH: &str = "/usr/lib/lanwell/lanwell-helper";
 
 /// Where everything is on a Linux system. The helper uses [`Paths::system`];
 /// tests point it at a temporary directory.
 #[derive(Debug, Clone)]
 pub struct Paths {
-    /// netfoo's own record of what it manages (see [`crate::state`]).
+    /// lanwell's own record of what it manages (see [`crate::state`]).
     pub state: PathBuf,
-    /// The Samba shares netfoo manages, included from smb.conf.
+    /// The Samba shares lanwell manages, included from smb.conf.
     pub samba_shares: PathBuf,
     /// Samba's main config file, which gets one `include` line.
     pub smb_conf: PathBuf,
-    /// The NFS exports netfoo manages. `exportfs` reads every file in /etc/exports.d.
+    /// The NFS exports lanwell manages. `exportfs` reads every file in /etc/exports.d.
     pub nfs_exports: PathBuf,
     /// Where the mounts' systemd units go (the administrator's units, not a package's).
     pub systemd_units: PathBuf,
@@ -44,12 +44,12 @@ pub struct Paths {
 impl Paths {
     pub fn system() -> Self {
         Self {
-            state: "/etc/netfoo/state.json".into(),
-            samba_shares: "/etc/samba/netfoo.conf".into(),
+            state: "/etc/lanwell/state.json".into(),
+            samba_shares: "/etc/samba/lanwell.conf".into(),
             smb_conf: "/etc/samba/smb.conf".into(),
-            nfs_exports: "/etc/exports.d/netfoo.exports".into(),
+            nfs_exports: "/etc/exports.d/lanwell.exports".into(),
             systemd_units: "/etc/systemd/system".into(),
-            credentials: "/etc/netfoo/credentials".into(),
+            credentials: "/etc/lanwell/credentials".into(),
         }
     }
 
@@ -68,5 +68,5 @@ impl Paths {
     }
 }
 
-/// The first line of every file netfoo generates.
-pub const GENERATED_HEADER: &str = "# Written by netfoo from /etc/netfoo/state.json. Changes made here will be overwritten:\n# use netfoo to change these shares.\n";
+/// The first line of every file lanwell generates.
+pub const GENERATED_HEADER: &str = "# Written by lanwell from /etc/lanwell/state.json. Changes made here will be overwritten:\n# use lanwell to change these shares.\n";

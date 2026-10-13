@@ -10,7 +10,7 @@ export type State = { smbShares: Array<SmbShare>, nfsExports: Array<NfsExport>,
  */
 mounts: Array<ManagedMount>, 
 /**
- * The file servers netfoo let through the firewall (so it only ever
+ * The file servers lanwell let through the firewall (so it only ever
  * takes back what it opened).
  */
 firewallOpened: Array<FileServer>, };

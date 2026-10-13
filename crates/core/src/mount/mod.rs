@@ -16,7 +16,7 @@ pub use smb::{SmbAddress, SmbLogin, SmbVersion};
 #[serde(rename_all = "camelCase")]
 pub struct Mount {
     pub share: RemoteShare,
-    /// The folder it appears in here. netfoo suggests `~/Network/<share>`.
+    /// The folder it appears in here. lanwell suggests `~/Network/<share>`.
     pub mount_point: AbsolutePath,
     pub when: MountWhen,
     pub read_only: bool,
@@ -74,7 +74,7 @@ pub struct Owner {
     pub gid: u32,
 }
 
-/// A mount as netfoo keeps it: what was asked for, and whose it is.
+/// A mount as lanwell keeps it: what was asked for, and whose it is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ManagedMount {
@@ -118,7 +118,7 @@ pub struct MountStatus {
     pub activity: MountActivity,
 }
 
-/// The protocols netfoo mounts with.
+/// The protocols lanwell mounts with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
@@ -145,7 +145,7 @@ pub fn check_host(host: &str) -> Result<(), InvalidValue> {
     let allowed = |c: char| c.is_ascii_alphanumeric() || ".-:[]".contains(c);
     if host.is_empty() || !host.chars().all(allowed) {
         return Err(invalid(format!(
-            "\"{host}\" isn't a server name or address netfoo understands."
+            "\"{host}\" isn't a server name or address lanwell understands."
         )));
     }
     Ok(())

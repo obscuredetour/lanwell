@@ -22,14 +22,14 @@ use crate::share::{NfsExport, SmbShare};
     rename_all_fields = "camelCase"
 )]
 pub enum Request {
-    /// Replace every Samba share netfoo manages with these.
+    /// Replace every Samba share lanwell manages with these.
     SetSmbShares { shares: Vec<SmbShare> },
-    /// Replace every NFS export netfoo manages with these.
+    /// Replace every NFS export lanwell manages with these.
     SetNfsExports { exports: Vec<NfsExport> },
     /// Set a user's Samba password, adding them to Samba if they're new to it.
     /// The user must already have an account on this machine.
     SetSmbPassword { user: UserName, password: Secret },
-    /// Mount a share from another machine, replacing any netfoo mount on the
+    /// Mount a share from another machine, replacing any lanwell mount on the
     /// same folder. `password` is for an SMB user login: needed for a new
     /// one, or left out to keep the one already saved.
     ///
@@ -46,12 +46,12 @@ pub enum Request {
     /// and have it not.
     SetServerRunning { server: FileServer, running: bool },
     /// Let a file server through the firewall from the local network, or
-    /// take back what netfoo let through.
+    /// take back what lanwell let through.
     SetFirewall { server: FileServer, allow: bool },
 }
 
 impl Request {
-    /// The polkit action that allows this request (see `crates/helper/linux/io.netfoo.policy`).
+    /// The polkit action that allows this request (see `crates/helper/linux/io.lanwell.policy`).
     pub fn action(&self) -> &'static str {
         match self {
             Request::SetSmbShares { .. }

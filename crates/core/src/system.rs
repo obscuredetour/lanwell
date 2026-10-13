@@ -18,7 +18,7 @@ pub enum Os {
     Other,
 }
 
-/// What netfoo can do here, for the UI to explain what's missing.
+/// What lanwell can do here, for the UI to explain what's missing.
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
@@ -80,12 +80,12 @@ pub enum HelperStatus {
     Outdated {
         installed: String,
     },
-    /// netfoo can't install a helper on this system yet.
+    /// lanwell can't install a helper on this system yet.
     Unsupported,
 }
 
 impl HelperStatus {
-    /// Asks the installed helper its version (`netfoo-helper --version`, which
+    /// Asks the installed helper its version (`lanwell-helper --version`, which
     /// needs no root) and compares it with `expected`.
     ///
     /// `bundled` is the helper that came with the app, if there is one beside
@@ -102,7 +102,7 @@ impl HelperStatus {
         else {
             return Self::Missing;
         };
-        // "netfoo-helper 0.1.0"
+        // "lanwell-helper 0.1.0"
         let stdout = String::from_utf8_lossy(&output.stdout);
         let installed = stdout.split_whitespace().last().unwrap_or_default();
         let same_build = bundled
@@ -177,17 +177,17 @@ pub fn detect_firewall() -> Firewall {
 }
 
 impl FileServerStatus {
-    /// What `server` is doing now. `opened_by_netfoo` is whether netfoo's state
+    /// What `server` is doing now. `opened_by_lanwell` is whether lanwell's state
     /// says it let it through the firewall.
-    pub fn detect(server: FileServer, opened_by_netfoo: bool) -> Self {
+    pub fn detect(server: FileServer, opened_by_lanwell: bool) -> Self {
         let unit = installed_unit(server);
         let property = |name| unit.and_then(|unit| systemctl_property(unit, name));
         let firewall = detect_firewall();
         let access = match firewall {
             // Nothing in the way.
-            Firewall::None => FirewallAccess::Allowed { by_netfoo: false },
-            Firewall::Ufw => ufw_access(server, opened_by_netfoo),
-            Firewall::Firewalld => firewalld_access(server, opened_by_netfoo),
+            Firewall::None => FirewallAccess::Allowed { by_lanwell: false },
+            Firewall::Ufw => ufw_access(server, opened_by_lanwell),
+            Firewall::Firewalld => firewalld_access(server, opened_by_lanwell),
         };
         Self {
             installed: unit.is_some(),
@@ -201,7 +201,7 @@ impl FileServerStatus {
 
 /// From ufw's saved rules, where they can be read (some distributions keep
 /// them from everyone but root).
-fn ufw_access(server: FileServer, by_netfoo: bool) -> FirewallAccess {
+fn ufw_access(server: FileServer, by_lanwell: bool) -> FirewallAccess {
     let rules: Vec<String> = ["/etc/ufw/user.rules", "/etc/ufw/user6.rules"]
         .iter()
         .filter_map(|path| fs::read_to_string(path).ok())
@@ -212,14 +212,14 @@ fn ufw_access(server: FileServer, by_netfoo: bool) -> FirewallAccess {
         .iter()
         .any(|rules| firewall::ufw_allows(rules, server.port()))
     {
-        FirewallAccess::Allowed { by_netfoo }
+        FirewallAccess::Allowed { by_lanwell }
     } else {
         FirewallAccess::Blocked
     }
 }
 
 /// From `firewall-cmd --query-service`, which says yes (0) or no (1).
-fn firewalld_access(server: FileServer, by_netfoo: bool) -> FirewallAccess {
+fn firewalld_access(server: FileServer, by_lanwell: bool) -> FirewallAccess {
     let Some(firewall_cmd) = find_program("firewall-cmd") else {
         return FirewallAccess::Unknown;
     };
@@ -229,7 +229,7 @@ fn firewalld_access(server: FileServer, by_netfoo: bool) -> FirewallAccess {
         .output()
         .map(|output| output.status.code())
     {
-        Ok(Some(0)) => FirewallAccess::Allowed { by_netfoo },
+        Ok(Some(0)) => FirewallAccess::Allowed { by_lanwell },
         Ok(Some(1)) => FirewallAccess::Blocked,
         _ => FirewallAccess::Unknown,
     }
@@ -290,7 +290,7 @@ mod tests {
 
     /// Prints what this machine's file servers and firewall are doing. Reads
     /// the real system, so it only runs when asked:
-    /// `cargo test -p netfoo-core -- --ignored --nocapture`.
+    /// `cargo test -p lanwell-core -- --ignored --nocapture`.
     #[test]
     #[ignore]
     fn file_servers_on_this_machine() {

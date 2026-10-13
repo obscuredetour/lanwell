@@ -21,7 +21,7 @@ pub fn write_atomically(path: &Path, contents: &[u8], mode: u32) -> io::Result<(
         .ok_or_else(|| io::Error::other("a file to write needs a name"))?;
     fs::create_dir_all(dir)?;
 
-    let temporary = dir.join(format!(".{}.netfoo-new", name.to_string_lossy()));
+    let temporary = dir.join(format!(".{}.lanwell-new", name.to_string_lossy()));
     let mut file = fs::File::create(&temporary)?;
     // Before writing, so a secret is never readable by others, even briefly.
     file.set_permissions(fs::Permissions::from_mode(mode))?;
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn writes_and_replaces() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("etc/samba/netfoo.conf");
+        let path = dir.path().join("etc/samba/lanwell.conf");
 
         write_atomically(&path, b"first", 0o644).unwrap();
         write_atomically(&path, b"second", 0o644).unwrap();

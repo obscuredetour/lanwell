@@ -79,7 +79,7 @@ pub fn render_mount_unit(managed: &ManagedMount, credentials: &str) -> String {
     format!(
         "{GENERATED_HEADER}\n\
          [Unit]\n\
-         Description=netfoo: {address}\n\
+         Description=lanwell: {address}\n\
          Wants=network-online.target\n\
          After=network-online.target\n\
          \n\
@@ -136,7 +136,7 @@ pub fn render_automount_unit(managed: &ManagedMount) -> String {
     format!(
         "{GENERATED_HEADER}\n\
          [Unit]\n\
-         Description=netfoo: {address} (mounted when first opened)\n\
+         Description=lanwell: {address} (mounted when first opened)\n\
          \n\
          [Automount]\n\
          Where={where_}\n\
@@ -224,12 +224,15 @@ mod tests {
     #[test]
     fn smb_on_first_access() {
         let managed = smb_mount(MountWhen::FirstAccess, alice(), SmbVersion::Automatic);
-        let unit = render_mount_unit(&managed, "/etc/netfoo/credentials/home-alice-Network-media");
+        let unit = render_mount_unit(
+            &managed,
+            "/etc/lanwell/credentials/home-alice-Network-media",
+        );
         assert!(unit.contains("What=//nas.lan/media\n"));
         assert!(unit.contains("Where=/home/alice/Network/media\n"));
         assert!(unit.contains("Type=cifs\n"));
         assert!(unit.contains(
-            "Options=credentials=/etc/netfoo/credentials/home-alice-Network-media,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,nosuid,nodev\n"
+            "Options=credentials=/etc/lanwell/credentials/home-alice-Network-media,uid=1000,gid=1000,forceuid,forcegid,file_mode=0600,dir_mode=0700,iocharset=utf8,nosuid,nodev\n"
         ));
         // The automount is what's enabled, not the mount.
         assert!(!unit.contains("[Install]"));

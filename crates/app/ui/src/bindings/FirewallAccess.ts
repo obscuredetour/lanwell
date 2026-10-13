@@ -3,4 +3,4 @@
 /**
  * Whether the firewall lets other computers reach a file server.
  */
-export type FirewallAccess = { "kind": "allowed", byNetfoo: boolean, } | { "kind": "blocked" } | { "kind": "unknown" };
+export type FirewallAccess = { "kind": "allowed", byLanwell: boolean, } | { "kind": "blocked" } | { "kind": "unknown" };

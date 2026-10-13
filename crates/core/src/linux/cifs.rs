@@ -2,7 +2,7 @@
 //! and which shares a server has.
 
 /// A plain explanation of why mounting failed, from what mount.cifs logged
-/// (the unit's journal). `None` if there's nothing netfoo recognises.
+/// (the unit's journal). `None` if there's nothing lanwell recognises.
 pub fn explain_mount_failure(log: &str) -> Option<String> {
     // mount.cifs reports "mount error(13): Permission denied"; the number is errno.
     const EXPLANATIONS: [(&str, &str); 10] = [
@@ -52,7 +52,7 @@ pub fn explain_mount_failure(log: &str) -> Option<String> {
         .iter()
         .find(|(needle, _)| log.contains(needle))
         .map(|(_, explanation)| explanation.to_string())
-        // Something mount.cifs said, even if netfoo can't explain it.
+        // Something mount.cifs said, even if lanwell can't explain it.
         .or_else(|| {
             log.lines()
                 .rev()

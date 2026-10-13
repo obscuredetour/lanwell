@@ -6,12 +6,12 @@ use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use netfoo_core::linux::Paths;
-use netfoo_core::linux::systemd::{
+use lanwell_core::linux::Paths;
+use lanwell_core::linux::systemd::{
     UnitNames, render_automount_unit, render_credentials, render_mount_unit,
 };
-use netfoo_core::mount::check_mount_point;
-use netfoo_core::{
+use lanwell_core::mount::check_mount_point;
+use lanwell_core::{
     AbsolutePath, InvalidValue, ManagedMount, Mount, MountWhen, Owner, RemoteShare, Secret,
     SmbLogin, State,
 };
@@ -28,9 +28,9 @@ pub struct Edit<'a> {
     pub replaces: Option<&'a AbsolutePath>,
 }
 
-/// Mounts `mount` for `owner`, replacing any netfoo mount on the same folder
+/// Mounts `mount` for `owner`, replacing any lanwell mount on the same folder
 /// (or on `edit.replaces`), and checks it connects. A folder with a mount
-/// netfoo didn't set up (its own unit, an fstab line, anything mounted there
+/// lanwell didn't set up (its own unit, an fstab line, anything mounted there
 /// now) is refused and left alone.
 pub fn set(
     mount: &Mount,
@@ -60,7 +60,7 @@ pub fn set(
     if let Some(old) = moved_from
         && !is_ours(old)
     {
-        return Err(InvalidValue(format!("{old} isn't one of netfoo's mounts.")).into());
+        return Err(InvalidValue(format!("{old} isn't one of lanwell's mounts.")).into());
     }
     let ours = is_ours(&mount.mount_point);
     if ours {
@@ -69,7 +69,7 @@ pub fn set(
         services.disable_now(&names.mount);
     } else if services.unit_in_use(&names.mount) || services.unit_in_use(&names.automount) {
         return Err(ApplyError::MountPoint(format!(
-            "{} already has a mount that netfoo didn't set up, so netfoo leaves it alone.",
+            "{} already has a mount that lanwell didn't set up, so lanwell leaves it alone.",
             mount.mount_point
         )));
     }
@@ -126,7 +126,7 @@ pub fn set(
 }
 
 /// Unmounts the share on `mount_point` and removes its units and
-/// credentials. The folder itself stays. Only netfoo's own mounts can be removed.
+/// credentials. The folder itself stays. Only lanwell's own mounts can be removed.
 pub fn remove(
     mount_point: &AbsolutePath,
     paths: &Paths,
@@ -138,7 +138,7 @@ pub fn remove(
         .iter()
         .any(|other| &other.mount.mount_point == mount_point)
     {
-        return Err(InvalidValue(format!("{mount_point} isn't one of netfoo's mounts.")).into());
+        return Err(InvalidValue(format!("{mount_point} isn't one of lanwell's mounts.")).into());
     }
     let names = UnitNames::for_mount_point(mount_point);
     services.disable_now(&names.automount);

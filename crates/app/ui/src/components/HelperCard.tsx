@@ -1,5 +1,5 @@
 // The foot of the sidebar, once the helper is installed: says so, and offers
-// to remove it (after asking, since netfoo can't change anything without it).
+// to remove it (after asking, since lanwell can't change anything without it).
 
 import { createSignal, Show } from 'solid-js';
 
@@ -42,7 +42,7 @@ export function HelperCard(props: { status: HelperStatus | undefined; onChanged:
           }
         >
           <p class="mt-1.5 text-fg-muted">
-            Shares stay as they are, but netfoo can't change them until the helper is installed again.
+            Shares stay as they are, but lanwell can't change them until the helper is installed again.
           </p>
           <div class="mt-1.5 flex gap-3">
             <button type="button" class={`text-danger ${link}`} disabled={action.busy()} onClick={remove}>

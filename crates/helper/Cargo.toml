@@ -1,13 +1,13 @@
 [package]
-name = "netfoo-helper"
+name = "lanwell-helper"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "netfoo's privileged helper: applies the app's requests as root, once polkit allows them"
+description = "lanwell's privileged helper: applies the app's requests as root, once polkit allows them"
 publish = false
 
 [dependencies]
-netfoo-core = { path = "../core" }
+lanwell-core = { path = "../core" }
 serde_json = "1.0.151"
 thiserror = "2.0.21"
 

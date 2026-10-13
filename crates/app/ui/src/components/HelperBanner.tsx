@@ -1,5 +1,5 @@
-// Offers to install netfoo's privileged helper when it's missing or from
-// another version. Without it netfoo can show what's shared but not change it.
+// Offers to install lanwell's privileged helper when it's missing or from
+// another version. Without it lanwell can show what's shared but not change it.
 
 import { Match, Switch } from 'solid-js';
 
@@ -29,13 +29,13 @@ export function HelperBanner(props: { status: HelperStatus | undefined; onChange
     <Switch>
       <Match when={props.status?.kind === 'missing'}>
         <Banner
-          message="To change what's shared, netfoo needs a small system helper. Installing it asks for an administrator's password, once."
+          message="To change what's shared, lanwell needs a small system helper. Installing it asks for an administrator's password, once."
           button="Install helper"
         />
       </Match>
       <Match when={props.status?.kind === 'outdated'}>
         <Banner
-          message="netfoo's system helper is from a different build of netfoo. Update it to keep changes working."
+          message="lanwell's system helper is from a different build of lanwell. Update it to keep changes working."
           button="Update helper"
         />
       </Match>
