@@ -4,7 +4,18 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 
 import { chooseFolder, localUsers, setSmbPassword, setSmbShares, type SmbShare, type SystemInfo } from '../api';
 import { ServerStatus } from './ServerStatus';
-import { Button, createAction, createEditing, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
+import {
+  Button,
+  createAction,
+  createEditing,
+  ErrorText,
+  Field,
+  FormSection,
+  inputClass,
+  ItemList,
+  Notice,
+  Section,
+} from './ui';
 
 export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChanged: () => void }) {
   const [users] = createResource(localUsers, { initialValue: [] });
@@ -35,6 +46,9 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
     shareForm.done();
   };
 
+  /** Whether `share` is the one the form below is editing. */
+  const isEditing = (share: SmbShare) => shareForm.editing()?.name === share.name;
+
   const startEditing = (share: SmbShare) => {
     formAction.reset();
     shareForm.edit(share);
@@ -53,7 +67,7 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
       <ServerStatus server="samba" shared={props.shares.length} />
 
       <Section title="Shared folders" description="Folders other computers can open over the network.">
-        <ItemList items={props.shares} empty="No folders are shared yet.">
+        <ItemList items={props.shares} empty="No folders are shared yet." highlighted={isEditing}>
           {(share) => (
             <>
               <div class="min-w-0 flex-1">
@@ -64,8 +78,8 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
                 {share.access.kind === 'guest' ? 'Anyone' : share.access.users.join(', ')}
                 {share.readOnly ? ' · read only' : ''}
               </span>
-              <Button disabled={listAction.busy()} onClick={() => startEditing(share)}>
-                Edit
+              <Button disabled={listAction.busy() || isEditing(share)} onClick={() => startEditing(share)}>
+                {isEditing(share) ? 'Editing' : 'Edit'}
               </Button>
               <Button
                 variant="danger"
@@ -86,7 +100,11 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
       </Section>
 
       <div ref={formTop}>
-        <Section title={shareForm.editing() ? `Edit “${shareForm.editing()!.name}”` : 'Share a folder'}>
+        <FormSection
+          title="Share a folder"
+          editing={shareForm.editing() ? `“${shareForm.editing()!.name}”` : null}
+          onCancel={stopEditing}
+        >
           <Show when={shareForm.form()} keyed>
             {({ editing }) => (
               <ShareForm
@@ -99,7 +117,7 @@ export function SambaPage(props: { info: SystemInfo; shares: SmbShare[]; onChang
             )}
           </Show>
           <ErrorText message={formAction.error()} />
-        </Section>
+        </FormSection>
       </div>
 
       <Section

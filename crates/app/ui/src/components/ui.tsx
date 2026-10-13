@@ -4,6 +4,7 @@ import type { JSX, ParentProps } from 'solid-js';
 import { createMemo, createSignal, For, Show, splitProps } from 'solid-js';
 
 import { messageOf } from '../api';
+import { Pencil, X } from '../icons';
 
 export function Section(props: ParentProps<{ title: string; description?: string }>) {
   return (
@@ -42,6 +43,46 @@ export function Button(props: ButtonProps) {
 
 export const inputClass =
   'w-full rounded-md border border-border bg-field px-2.5 py-1.5 outline-none focus:border-accent';
+
+/**
+ * The section holding an add-or-edit form. Adding, it's a plain section
+ * titled `title`. Editing (`editing` names what's edited), it becomes a
+ * panel that can't be mistaken for adding: an accent border and tint, an
+ * "Editing" label, a × to stop, and a brief ring as it appears.
+ */
+export function FormSection(props: ParentProps<{ title: string; editing: string | null; onCancel: () => void }>) {
+  return (
+    <Show when={props.editing} keyed fallback={<Section title={props.title}>{props.children}</Section>}>
+      {(name) => (
+        <section
+          aria-label={`Editing ${name}`}
+          class="mb-8 rounded-lg border border-accent bg-accent/5 px-4 pt-3 pb-4 motion-safe:animate-edit-in"
+        >
+          <div class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-accent uppercase">
+                <Pencil size={13} />
+                Editing
+              </div>
+              <h2 class="mt-0.5 truncate text-base font-semibold">{name}</h2>
+              <p class="mt-0.5 text-xs text-fg-muted">Nothing changes until you save.</p>
+            </div>
+            <button
+              type="button"
+              class="rounded-md p-1 text-fg-muted hover:bg-hover hover:text-fg"
+              aria-label="Stop editing"
+              title="Stop editing"
+              onClick={() => props.onCancel()}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div class="mt-3">{props.children}</div>
+        </section>
+      )}
+    </Show>
+  );
+}
 
 /** A labelled form control. */
 export function Field(props: ParentProps<{ label: string; hint?: string }>) {
@@ -103,12 +144,25 @@ export function Notice(props: ParentProps<{ tone?: 'warning' | 'danger' }>) {
 }
 
 /** A list of things, or what to say when there are none. */
-export function ItemList<T>(props: { items: T[]; empty: string; children: (item: T) => JSX.Element }) {
+export function ItemList<T>(props: {
+  items: T[];
+  empty: string;
+  /** Marks an item, like the one being edited, with a tint and an accent bar. */
+  highlighted?: (item: T) => boolean;
+  children: (item: T) => JSX.Element;
+}) {
   return (
     <Show when={props.items.length > 0} fallback={<p class="text-fg-muted italic">{props.empty}</p>}>
       <ul class="divide-y divide-border rounded-md border border-border">
         <For each={props.items}>
-          {(item) => <li class="flex items-center gap-3 px-3 py-2">{props.children(item)}</li>}
+          {(item) => (
+            <li
+              class="flex items-center gap-3 px-3 py-2"
+              classList={{ 'bg-accent/10 shadow-[inset_3px_0_0_var(--accent)]': props.highlighted?.(item) ?? false }}
+            >
+              {props.children(item)}
+            </li>
+          )}
         </For>
       </ul>
     </Show>

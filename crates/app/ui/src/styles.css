@@ -26,6 +26,18 @@
 
   --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Cantarell', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', monospace;
+
+  /* A ring that fades as an editing panel appears, to draw the eye to it. */
+  --animate-edit-in: edit-in 0.9s ease-out;
+
+  @keyframes edit-in {
+    from {
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 35%, transparent);
+    }
+    to {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
 }
 
 :root {

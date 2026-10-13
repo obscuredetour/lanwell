@@ -11,3 +11,5 @@ export { default as FolderOpen } from 'lucide-solid/icons/folder-open';
 export { default as Network } from 'lucide-solid/icons/network';
 export { default as ShieldCheck } from 'lucide-solid/icons/shield-check';
 export { default as HardDrive } from 'lucide-solid/icons/hard-drive';
+export { default as Pencil } from 'lucide-solid/icons/pencil';
+export { default as X } from 'lucide-solid/icons/x';

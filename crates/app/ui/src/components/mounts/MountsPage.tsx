@@ -4,7 +4,7 @@
 import { createResource, createSignal, onCleanup } from 'solid-js';
 
 import { type ManagedMount, type MountStatus, mountStatuses, openMount, removeMount, type SystemInfo } from '../../api';
-import { Button, createAction, ErrorText, ItemList, Section, Tag } from '../ui';
+import { Button, createAction, ErrorText, FormSection, ItemList, Section, Tag } from '../ui';
 import { tildify } from './addresses';
 import { ConnectForm } from './ConnectForm';
 
@@ -20,6 +20,9 @@ export function MountsPage(props: { info: SystemInfo; mounts: ManagedMount[]; on
   /** The mount being edited in the form below, if any. */
   const [editing, setEditing] = createSignal<ManagedMount | null>(null);
   let form: HTMLDivElement | undefined;
+
+  /** Whether `managed` is the mount the form below is editing. */
+  const isEditing = (managed: ManagedMount) => editing()?.mountPoint === managed.mountPoint;
 
   const startEditing = (managed: ManagedMount) => {
     setEditing(managed);
@@ -42,7 +45,7 @@ export function MountsPage(props: { info: SystemInfo; mounts: ManagedMount[]; on
   return (
     <>
       <Section title="Network folders" description="Shares on other computers, as folders on this one.">
-        <ItemList items={props.mounts} empty="No shares are mounted yet.">
+        <ItemList items={props.mounts} empty="No shares are mounted yet." highlighted={isEditing}>
           {(managed) => (
             <>
               <div class="min-w-0 flex-1">
@@ -58,8 +61,8 @@ export function MountsPage(props: { info: SystemInfo; mounts: ManagedMount[]; on
               <Button disabled={action.busy()} onClick={() => action.run(() => openMount(managed.mountPoint))}>
                 Open
               </Button>
-              <Button disabled={action.busy()} onClick={() => startEditing(managed)}>
-                Edit
+              <Button disabled={action.busy() || isEditing(managed)} onClick={() => startEditing(managed)}>
+                {isEditing(managed) ? 'Editing' : 'Edit'}
               </Button>
               <Button variant="danger" disabled={action.busy()} onClick={() => remove(managed.mountPoint)}>
                 Remove
@@ -71,9 +74,13 @@ export function MountsPage(props: { info: SystemInfo; mounts: ManagedMount[]; on
       </Section>
 
       <div ref={form}>
-        <Section title={editing() ? `Edit ${editing()!.share.address}` : 'Connect to a share'}>
+        <FormSection
+          title="Connect to a share"
+          editing={editing()?.share.address ?? null}
+          onCancel={() => setEditing(null)}
+        >
           <ConnectForm info={props.info} editing={editing()} onChanged={changed} onDone={() => setEditing(null)} />
-        </Section>
+        </FormSection>
       </div>
     </>
   );

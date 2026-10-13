@@ -4,7 +4,18 @@ import { createSignal, Show } from 'solid-js';
 
 import { chooseFolder, type NfsExport, setNfsExports, type SystemInfo } from '../api';
 import { ServerStatus } from './ServerStatus';
-import { Button, createAction, createEditing, ErrorText, Field, inputClass, ItemList, Notice, Section } from './ui';
+import {
+  Button,
+  createAction,
+  createEditing,
+  ErrorText,
+  Field,
+  FormSection,
+  inputClass,
+  ItemList,
+  Notice,
+  Section,
+} from './ui';
 
 export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChanged: () => void }) {
   // Separate, so an error shows next to what caused it.
@@ -34,6 +45,9 @@ export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChang
     exportForm.done();
   };
 
+  /** Whether `nfsExport` is the one the form below is editing. */
+  const isEditing = (nfsExport: NfsExport) => exportForm.editing()?.path === nfsExport.path;
+
   const startEditing = (nfsExport: NfsExport) => {
     formAction.reset();
     exportForm.edit(nfsExport);
@@ -55,7 +69,7 @@ export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChang
         title="Exported folders"
         description="NFS has no user names or passwords: it trusts the machines you list, and their users. List only machines you trust, or use Samba."
       >
-        <ItemList items={props.exports} empty="No folders are exported yet.">
+        <ItemList items={props.exports} empty="No folders are exported yet." highlighted={isEditing}>
           {(nfsExport) => (
             <>
               <div class="min-w-0 flex-1">
@@ -65,8 +79,8 @@ export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChang
                   {nfsExport.readOnly ? ' · read only' : ''}
                 </div>
               </div>
-              <Button disabled={listAction.busy()} onClick={() => startEditing(nfsExport)}>
-                Edit
+              <Button disabled={listAction.busy() || isEditing(nfsExport)} onClick={() => startEditing(nfsExport)}>
+                {isEditing(nfsExport) ? 'Editing' : 'Edit'}
               </Button>
               <Button
                 variant="danger"
@@ -87,14 +101,14 @@ export function NfsPage(props: { info: SystemInfo; exports: NfsExport[]; onChang
       </Section>
 
       <div ref={formTop}>
-        <Section title={exportForm.editing() ? `Edit ${exportForm.editing()!.path}` : 'Export a folder'}>
+        <FormSection title="Export a folder" editing={exportForm.editing()?.path ?? null} onCancel={stopEditing}>
           <Show when={exportForm.form()} keyed>
             {({ editing }) => (
               <ExportForm initial={editing} busy={formAction.busy()} onSave={saveExport} onCancel={stopEditing} />
             )}
           </Show>
           <ErrorText message={formAction.error()} />
-        </Section>
+        </FormSection>
       </div>
     </>
   );
