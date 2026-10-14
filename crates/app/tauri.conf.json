@@ -1,17 +1,17 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "netfoo",
-  "identifier": "io.netfoo.app",
+  "productName": "lanwell",
+  "identifier": "io.lanwell.app",
   "build": {
     "devUrl": "http://localhost:1430",
     "frontendDist": "ui/dist",
-    "beforeDevCommand": { "script": "cargo build --quiet -p netfoo-helper && pnpm dev", "cwd": "ui" },
+    "beforeDevCommand": { "script": "cargo build --quiet -p lanwell-helper && pnpm dev", "cwd": "ui" },
     "beforeBuildCommand": { "script": "pnpm build", "cwd": "ui" }
   },
   "app": {
     "windows": [
       {
-        "title": "netfoo",
+        "title": "lanwell",
         "width": 960,
         "height": 680,
         "minWidth": 560,

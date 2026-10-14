@@ -34,7 +34,7 @@ export type {
 
 export const systemInfo = () => invoke<SystemInfo>('system_info');
 
-/** Everything netfoo manages (read without a password). */
+/** Everything lanwell manages (read without a password). */
 export const loadState = () => invoke<State>('load_state');
 
 /** Whether Samba or the NFS server is installed, running, and let through the firewall. */
@@ -43,7 +43,7 @@ export const fileServerStatus = (server: FileServer) => invoke<FileServerStatus>
 /** People with accounts on this machine. */
 export const localUsers = () => invoke<string[]>('local_users');
 
-/** Whether netfoo's privileged helper is installed, and the same version as the app. */
+/** Whether lanwell's privileged helper is installed, and the same version as the app. */
 export const helperStatus = () => invoke<HelperStatus>('helper_status');
 
 /** Installs or updates the helper. The system asks for an administrator's password. */
@@ -57,24 +57,24 @@ export const uninstallHelper = () => invoke<void>('uninstall_helper');
 
 const apply = (request: Request) => invoke<void>('apply', { request });
 
-/** Replaces every Samba share netfoo manages. */
+/** Replaces every Samba share lanwell manages. */
 export const setSmbShares = (shares: SmbShare[]) => apply({ kind: 'setSmbShares', shares });
 
-/** Replaces every NFS export netfoo manages. */
+/** Replaces every NFS export lanwell manages. */
 export const setNfsExports = (exports: NfsExport[]) => apply({ kind: 'setNfsExports', exports });
 
 /** Starts a file server and has it start with the computer, or stops it and has it not. */
 export const setServerRunning = (server: FileServer, running: boolean) =>
   apply({ kind: 'setServerRunning', server, running });
 
-/** Lets a file server through the firewall from the local network, or takes back what netfoo let through. */
+/** Lets a file server through the firewall from the local network, or takes back what lanwell let through. */
 export const setFirewall = (server: FileServer, allow: boolean) => apply({ kind: 'setFirewall', server, allow });
 
 /** Sets a user's Samba password (separate from their login password). */
 export const setSmbPassword = (user: string, password: string) => apply({ kind: 'setSmbPassword', user, password });
 
 /**
- * Mounts a share from another machine, SMB or NFS (replacing any netfoo mount
+ * Mounts a share from another machine, SMB or NFS (replacing any lanwell mount
  * on the same folder). `password` is for an SMB user login: a new one needs
  * it; null keeps the saved one. `replaces` is the folder of the mount being
  * edited, if the edit moves it.

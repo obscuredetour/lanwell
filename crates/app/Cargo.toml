@@ -1,5 +1,5 @@
 [package]
-name = "netfoo"
+name = "lanwell"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ description = "Share folders and mount network shares, without the command line"
 publish = false
 
 [dependencies]
-netfoo-core = { path = "../core", features = ["ts"] }
+lanwell-core = { path = "../core", features = ["ts"] }
 mdns-sd = "0.21.5"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

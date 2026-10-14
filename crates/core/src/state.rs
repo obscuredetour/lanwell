@@ -1,9 +1,9 @@
-//! Everything netfoo manages, as one file.
+//! Everything lanwell manages, as one file.
 //!
 //! The state file is the source of truth: the helper changes it, then
 //! regenerates the Samba and NFS config files from it. Those files are never
 //! parsed back, so hand edits to them are overwritten (they say so at the top),
-//! and anything netfoo didn't write (the rest of smb.conf, /etc/exports) is
+//! and anything lanwell didn't write (the rest of smb.conf, /etc/exports) is
 //! left alone.
 //!
 //! It's readable by everyone and holds no secrets, so the app can show it
@@ -29,7 +29,7 @@ pub struct State {
     pub nfs_exports: Vec<NfsExport>,
     /// Shares on other machines mounted here, SMB and NFS.
     pub mounts: Vec<ManagedMount>,
-    /// The file servers netfoo let through the firewall (so it only ever
+    /// The file servers lanwell let through the firewall (so it only ever
     /// takes back what it opened).
     pub firewall_opened: Vec<FileServer>,
 }
@@ -38,7 +38,7 @@ pub struct State {
 pub enum StateError {
     #[error("couldn't read {path}: {source}")]
     Read { path: String, source: io::Error },
-    #[error("{path} isn't a netfoo state file netfoo can read: {source}")]
+    #[error("{path} isn't a lanwell state file lanwell can read: {source}")]
     Parse {
         path: String,
         source: serde_json::Error,

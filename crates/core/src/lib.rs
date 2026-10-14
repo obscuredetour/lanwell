@@ -1,4 +1,4 @@
-//! netfoo's core: what a share is, what the privileged helper can be asked to
+//! lanwell's core: what a share is, what the privileged helper can be asked to
 //! do, and the config files it writes for each.
 //!
 //! Nothing here needs root or talks to the system bus, so it's shared by the
@@ -8,10 +8,10 @@
 //! - [`names`]: validated names and paths. Every value that ends up in a
 //!   config file goes through one of these types, so the helper never writes
 //!   a newline or a `[` it didn't mean to.
-//! - [`share`]: Samba shares and NFS exports, as netfoo models them.
+//! - [`share`]: Samba shares and NFS exports, as lanwell models them.
 //! - [`fileserver`]: Samba and the NFS server themselves, and the firewall.
 //! - [`mount`]: other machines' shares (SMB or NFS), mounted here.
-//! - [`state`]: everything netfoo manages, saved as one JSON file. The config
+//! - [`state`]: everything lanwell manages, saved as one JSON file. The config
 //!   files are generated from it, never parsed back.
 //! - [`request`]: what the app asks the helper to do.
 //! - [`bus`]: the helper's D-Bus and polkit names.

@@ -1,19 +1,19 @@
-//! netfoo-helper: the only part of netfoo that runs as root.
+//! lanwell-helper: the only part of lanwell that runs as root.
 //!
-//! The app (running as the user) sends it a [`netfoo_core::Request`] over the
+//! The app (running as the user) sends it a [`lanwell_core::Request`] over the
 //! system bus. The helper asks polkit whether the caller may make that kind
 //! of change (polkit shows the password prompt), then applies it.
 //!
 //! It isn't started by hand: D-Bus starts it the first time the app calls it
-//! (see `linux/io.netfoo.Helper1.service`), and it exits after a couple of
+//! (see `linux/io.lanwell.Helper1.service`), and it exits after a couple of
 //! minutes with nothing to do. It's put in place by a package, or by its own
 //! `install` command (see `install.rs`).
 //!
 //! ```text
-//! netfoo-helper              serve requests (what D-Bus runs)
-//! netfoo-helper install      install this binary and its D-Bus, systemd and polkit files (root)
-//! netfoo-helper uninstall    remove them again (root)
-//! netfoo-helper --version    print the version (no root needed; the app checks it)
+//! lanwell-helper              serve requests (what D-Bus runs)
+//! lanwell-helper install      install this binary and its D-Bus, systemd and polkit files (root)
+//! lanwell-helper uninstall    remove them again (root)
+//! lanwell-helper --version    print the version (no root needed; the app checks it)
 //! ```
 
 mod apply;
@@ -38,7 +38,7 @@ fn main() -> ExitCode {
         Some("install") => install::install().map_err(|e| e.to_string()),
         Some("uninstall") => install::uninstall().map_err(|e| e.to_string()),
         Some("--version") => {
-            println!("netfoo-helper {}", env!("CARGO_PKG_VERSION"));
+            println!("lanwell-helper {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         Some(other) => Err(format!(
@@ -48,7 +48,7 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) => {
-            eprintln!("netfoo-helper: {message}");
+            eprintln!("lanwell-helper: {message}");
             ExitCode::FAILURE
         }
     }
@@ -56,6 +56,6 @@ fn main() -> ExitCode {
 
 #[cfg(not(target_os = "linux"))]
 fn main() -> ExitCode {
-    eprintln!("netfoo-helper only runs on Linux so far.");
+    eprintln!("lanwell-helper only runs on Linux so far.");
     ExitCode::FAILURE
 }

@@ -208,7 +208,7 @@ fn check_nfs_client(client: &str) -> Result<(), InvalidValue> {
     }
     if !client.chars().all(allowed) {
         return Err(invalid(format!(
-            "\"{client}\" isn't a host name, address or network netfoo understands."
+            "\"{client}\" isn't a host name, address or network lanwell understands."
         )));
     }
     Ok(())
@@ -231,7 +231,7 @@ fn check_remote_name(name: &str) -> Result<(), InvalidValue> {
     }
     if has_control_chars(name) || name.len() > 256 {
         return Err(invalid(format!(
-            "\"{name}\" isn't a user name netfoo can use."
+            "\"{name}\" isn't a user name lanwell can use."
         )));
     }
     Ok(())

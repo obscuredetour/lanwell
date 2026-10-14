@@ -1916,6 +1916,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "lanwell"
+version = "0.1.0"
+dependencies = [
+ "lanwell-core",
+ "mdns-sd",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "zbus",
+]
+
+[[package]]
+name = "lanwell-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "ts-rs",
+]
+
+[[package]]
+name = "lanwell-helper"
+version = "0.1.0"
+dependencies = [
+ "lanwell-core",
+ "libc",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "zbus",
+]
+
+[[package]]
 name = "libappindicator"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2128,44 +2166,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee6cda3051665f1fb8d9e08fc35c96d5a244fb1be711a03b71118828afc9a873"
 dependencies = [
  "jni-sys 0.3.1",
-]
-
-[[package]]
-name = "netfoo"
-version = "0.1.0"
-dependencies = [
- "mdns-sd",
- "netfoo-core",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "zbus",
-]
-
-[[package]]
-name = "netfoo-core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "ts-rs",
-]
-
-[[package]]
-name = "netfoo-helper"
-version = "0.1.0"
-dependencies = [
- "libc",
- "netfoo-core",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "zbus",
 ]
 
 [[package]]

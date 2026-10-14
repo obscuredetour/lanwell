@@ -1,8 +1,8 @@
 # Lets D-Bus start the helper the first time something calls it. The work of
 # starting it is handed to systemd (SystemdService), which runs it as
-# netfoo-helper.service.
+# lanwell-helper.service.
 [D-BUS Service]
-Name=io.netfoo.Helper1
-Exec=/usr/lib/netfoo/netfoo-helper
+Name=io.lanwell.Helper1
+Exec=/usr/lib/lanwell/lanwell-helper
 User=root
-SystemdService=netfoo-helper.service
+SystemdService=lanwell-helper.service

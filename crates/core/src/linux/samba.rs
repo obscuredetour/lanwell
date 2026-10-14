@@ -1,10 +1,10 @@
-//! Samba's config: the share sections netfoo generates, and the line that
+//! Samba's config: the share sections lanwell generates, and the line that
 //! includes them from smb.conf.
 
 use crate::linux::GENERATED_HEADER;
 use crate::share::{SmbAccess, SmbShare};
 
-/// The contents of netfoo's Samba file (`/etc/samba/netfoo.conf`): one section per share.
+/// The contents of lanwell's Samba file (`/etc/samba/lanwell.conf`): one section per share.
 ///
 /// It holds only share sections, never `[global]` settings, so it can be
 /// included from anywhere in smb.conf (see [`with_include`]).
@@ -27,7 +27,7 @@ fn render_share(share: &SmbShare) -> String {
     match &share.access {
         SmbAccess::Guest => {
             // Also needs `map to guest = bad user` in [global], which the
-            // smb.conf netfoo creates has (see [`new_smb_conf`]).
+            // smb.conf lanwell creates has (see [`new_smb_conf`]).
             lines.push("   guest ok = yes".into());
         }
         SmbAccess::Users { users } => {
@@ -39,7 +39,7 @@ fn render_share(share: &SmbShare) -> String {
     lines.join("\n") + "\n"
 }
 
-/// smb.conf with a line including netfoo's file added at the end, or `None`
+/// smb.conf with a line including lanwell's file added at the end, or `None`
 /// if it's already there.
 ///
 /// `include` reads the file in place, so at the end of smb.conf its sections
@@ -53,7 +53,7 @@ pub fn with_include(smb_conf: &str, include_path: &str) -> Option<String> {
     if !out.is_empty() && !out.ends_with('\n') {
         out.push('\n');
     }
-    out.push_str("\n# Shares managed by netfoo\n");
+    out.push_str("\n# Shares managed by lanwell\n");
     out.push_str(&line);
     out.push('\n');
     Some(out)
@@ -64,19 +64,19 @@ fn include_line(include_path: &str) -> String {
 }
 
 /// smb.conf for a system that doesn't have one yet (Arch, for example, ships
-/// without it). It's the user's file from then on: netfoo only ever adds the
+/// without it). It's the user's file from then on: lanwell only ever adds the
 /// include line.
 pub fn new_smb_conf(include_path: &str) -> String {
     format!(
-        "# Created by netfoo, because there was no smb.conf. It's yours to edit:\n\
-         # netfoo only needs the include line at the end.\n\
+        "# Created by lanwell, because there was no smb.conf. It's yours to edit:\n\
+         # lanwell only needs the include line at the end.\n\
          \n\
          [global]\n   \
             server role = standalone server\n   \
             # Lets shares marked as open to guests work without a password.\n   \
             map to guest = bad user\n\
          \n\
-         # Shares managed by netfoo\n\
+         # Shares managed by lanwell\n\
          {}\n",
         include_line(include_path)
     )
@@ -118,18 +118,18 @@ mod tests {
     #[test]
     fn adds_the_include_once() {
         let original = "[global]\n   workgroup = HOME";
-        let included = with_include(original, "/etc/samba/netfoo.conf").unwrap();
+        let included = with_include(original, "/etc/samba/lanwell.conf").unwrap();
         assert!(included.starts_with(original));
-        assert!(included.ends_with("include = /etc/samba/netfoo.conf\n"));
-        assert_eq!(with_include(&included, "/etc/samba/netfoo.conf"), None);
+        assert!(included.ends_with("include = /etc/samba/lanwell.conf\n"));
+        assert_eq!(with_include(&included, "/etc/samba/lanwell.conf"), None);
     }
 
     #[test]
     fn a_new_smb_conf_already_includes() {
         assert_eq!(
             with_include(
-                &new_smb_conf("/etc/samba/netfoo.conf"),
-                "/etc/samba/netfoo.conf"
+                &new_smb_conf("/etc/samba/lanwell.conf"),
+                "/etc/samba/lanwell.conf"
             ),
             None
         );

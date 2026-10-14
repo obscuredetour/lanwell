@@ -2,7 +2,7 @@
 import type { Os } from "./Os";
 
 /**
- * What netfoo can do here, for the UI to explain what's missing.
+ * What lanwell can do here, for the UI to explain what's missing.
  */
 export type SystemInfo = { os: Os, 
 /**

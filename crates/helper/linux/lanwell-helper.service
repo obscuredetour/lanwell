@@ -1,10 +1,10 @@
 [Unit]
-Description=netfoo helper (applies changes to shared folders)
+Description=lanwell helper (applies changes to shared folders)
 
 [Service]
 Type=dbus
-BusName=io.netfoo.Helper1
-ExecStart=/usr/lib/netfoo/netfoo-helper
+BusName=io.lanwell.Helper1
+ExecStart=/usr/lib/lanwell/lanwell-helper
 
 # The helper only writes under /etc and runs Samba's and NFS's own tools. It
 # never needs to write to anyone's home folder (shared folders are only named

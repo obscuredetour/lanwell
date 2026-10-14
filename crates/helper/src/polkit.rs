@@ -1,6 +1,6 @@
 //! Asking polkit whether a caller may do something.
 //!
-//! polkit decides from the action's defaults (in `linux/io.netfoo.policy`) and
+//! polkit decides from the action's defaults (in `linux/io.lanwell.policy`) and
 //! any local rules, and shows the caller a password prompt when the answer is
 //! "only with an administrator's password".
 

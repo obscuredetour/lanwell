@@ -97,10 +97,10 @@ function FirewallLine(props: {
       <Match when={allowed()}>
         {(allowed) => (
           <Line ok>
-            {allowed().byNetfoo
+            {allowed().byLanwell
               ? `${firewall()} lets ${props.name} in from your local network.`
               : `${firewall()} lets ${props.name} in.`}
-            <Show when={allowed().byNetfoo}>
+            <Show when={allowed().byLanwell}>
               <Button disabled={props.busy} onClick={() => props.onChange(false)}>
                 Stop allowing
               </Button>

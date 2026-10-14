@@ -2,7 +2,7 @@
 //! which folders a server exports.
 
 /// A plain explanation of why mounting failed, from what mount.nfs logged
-/// (the unit's journal). `None` if there's nothing netfoo recognises.
+/// (the unit's journal). `None` if there's nothing lanwell recognises.
 pub fn explain_mount_failure(log: &str) -> Option<String> {
     const EXPLANATIONS: [(&str, &str); 9] = [
         (
@@ -47,7 +47,7 @@ pub fn explain_mount_failure(log: &str) -> Option<String> {
         .iter()
         .find(|(needle, _)| log.contains(needle))
         .map(|(_, explanation)| explanation.to_string())
-        // Something mount.nfs said, even if netfoo can't explain it.
+        // Something mount.nfs said, even if lanwell can't explain it.
         .or_else(|| {
             log.lines()
                 .rev()

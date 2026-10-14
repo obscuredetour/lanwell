@@ -6,12 +6,12 @@ use std::io::Read;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use netfoo_core::linux::cifs::{self, parse_share_list};
-use netfoo_core::linux::nfs_client::{self, parse_export_list};
-use netfoo_core::linux::systemd::UnitNames;
-use netfoo_core::mount::check_host;
-use netfoo_core::system::find_program;
-use netfoo_core::{ManagedMount, MountActivity, MountStatus};
+use lanwell_core::linux::cifs::{self, parse_share_list};
+use lanwell_core::linux::nfs_client::{self, parse_export_list};
+use lanwell_core::linux::systemd::UnitNames;
+use lanwell_core::mount::check_host;
+use lanwell_core::system::find_program;
+use lanwell_core::{ManagedMount, MountActivity, MountStatus};
 
 /// What each mount is doing now, from systemd (no root needed).
 pub fn statuses(mounts: &[ManagedMount]) -> Vec<MountStatus> {

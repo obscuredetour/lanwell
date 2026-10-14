@@ -1,7 +1,7 @@
-//! `netfoo-helper install` and `uninstall`: putting the helper where D-Bus
-//! can start it, for a netfoo that didn't come from a package.
+//! `lanwell-helper install` and `uninstall`: putting the helper where D-Bus
+//! can start it, for a lanwell that didn't come from a package.
 //!
-//! The app's Install button runs `pkexec netfoo-helper install`, so the
+//! The app's Install button runs `pkexec lanwell-helper install`, so the
 //! person sees the desktop's own password prompt; in development,
 //! `scripts/install-helper-dev.sh` runs it with sudo. A package installs the
 //! same files itself and never needs this.
@@ -13,7 +13,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use netfoo_core::linux::HELPER_PATH;
+use lanwell_core::linux::HELPER_PATH;
 
 use crate::files::write_atomically;
 use crate::services::run;
@@ -22,24 +22,24 @@ use crate::services::run;
 /// same files in the same places (see `linux/README.md`).
 const FILES: [(&str, &str); 4] = [
     (
-        "/usr/share/dbus-1/system-services/io.netfoo.Helper1.service",
-        include_str!("../linux/io.netfoo.Helper1.service"),
+        "/usr/share/dbus-1/system-services/io.lanwell.Helper1.service",
+        include_str!("../linux/io.lanwell.Helper1.service"),
     ),
     (
-        "/usr/share/dbus-1/system.d/io.netfoo.Helper1.conf",
-        include_str!("../linux/io.netfoo.Helper1.conf"),
+        "/usr/share/dbus-1/system.d/io.lanwell.Helper1.conf",
+        include_str!("../linux/io.lanwell.Helper1.conf"),
     ),
     (
-        "/usr/lib/systemd/system/netfoo-helper.service",
-        include_str!("../linux/netfoo-helper.service"),
+        "/usr/lib/systemd/system/lanwell-helper.service",
+        include_str!("../linux/lanwell-helper.service"),
     ),
     (
-        "/usr/share/polkit-1/actions/io.netfoo.policy",
-        include_str!("../linux/io.netfoo.policy"),
+        "/usr/share/polkit-1/actions/io.lanwell.policy",
+        include_str!("../linux/io.lanwell.policy"),
     ),
 ];
 
-const UNIT: &str = "netfoo-helper.service";
+const UNIT: &str = "lanwell-helper.service";
 
 #[derive(Debug, thiserror::Error)]
 pub enum InstallError {
@@ -71,12 +71,12 @@ pub fn install() -> Result<(), InstallError> {
     }
 
     reload_system()?;
-    println!("Installed {HELPER_PATH}. D-Bus starts it when netfoo needs it.");
+    println!("Installed {HELPER_PATH}. D-Bus starts it when lanwell needs it.");
     Ok(())
 }
 
 /// Removes everything [`install`] put in place. Shares the helper set up, and
-/// /etc/netfoo, are left as they are.
+/// /etc/lanwell, are left as they are.
 pub fn uninstall() -> Result<(), InstallError> {
     require_root()?;
     stop_running_helper();
@@ -96,7 +96,7 @@ pub fn uninstall() -> Result<(), InstallError> {
     );
 
     reload_system()?;
-    println!("Removed netfoo-helper. Shares it set up, and /etc/netfoo, are left as they are.");
+    println!("Removed lanwell-helper. Shares it set up, and /etc/lanwell, are left as they are.");
     Ok(())
 }
 

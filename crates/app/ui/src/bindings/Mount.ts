@@ -8,6 +8,6 @@ import type { RemoteShare } from "./RemoteShare";
  */
 export type Mount = { share: RemoteShare, 
 /**
- * The folder it appears in here. netfoo suggests `~/Network/<share>`.
+ * The folder it appears in here. lanwell suggests `~/Network/<share>`.
  */
 mountPoint: AbsolutePath, when: MountWhen, readOnly: boolean, };

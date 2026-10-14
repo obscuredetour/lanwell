@@ -1,4 +1,4 @@
-# netfoo
+# lanwell
 
 Mount other machines' shares, and share folders on your network, without editing
 fstab, smb.conf or /etc/exports.
@@ -11,7 +11,7 @@ fstab, smb.conf or /etc/exports.
   open it (people on this machine, or anyone), done. Set each person's Samba
   password from the same place.
 - **NFS exports** for Linux and other Unix machines, by host or network.
-- **Leaves your config alone.** netfoo writes files of its own and adds one
+- **Leaves your config alone.** lanwell writes files of its own and adds one
   `include` line to smb.conf; anything you configured by hand stays as it was.
 
 For Linux; macOS maybe later. Rust core, a small privileged helper behind
@@ -73,6 +73,6 @@ pnpm --dir crates/app/ui lint
 
 ## License
 
-[MIT](LICENSE). netfoo runs the system's own tools as separate programs (Samba's
+[MIT](LICENSE). lanwell runs the system's own tools as separate programs (Samba's
 `smbclient` and `smbpasswd`, cifs-utils' `mount.cifs`, nfs-utils' `exportfs`)
 rather than including their code.

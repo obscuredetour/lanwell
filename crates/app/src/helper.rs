@@ -1,22 +1,22 @@
-//! netfoo-helper: asking it for changes over the system bus, and installing it.
+//! lanwell-helper: asking it for changes over the system bus, and installing it.
 
 use std::path::PathBuf;
 use std::process::Command;
 
-use netfoo_core::Request;
-use netfoo_core::linux::HELPER_PATH;
-use netfoo_core::system::find_program;
+use lanwell_core::Request;
+use lanwell_core::linux::HELPER_PATH;
+use lanwell_core::system::find_program;
 use zbus::fdo;
 
 // The proxy macro needs literal names; the test below keeps them in step with
-// netfoo_core::bus, which the helper uses.
+// lanwell_core::bus, which the helper uses.
 #[zbus::proxy(
-    interface = "io.netfoo.Helper1",
-    default_service = "io.netfoo.Helper1",
-    default_path = "/io/netfoo/Helper1"
+    interface = "io.lanwell.Helper1",
+    default_service = "io.lanwell.Helper1",
+    default_path = "/io/lanwell/Helper1"
 )]
 trait Helper {
-    /// Applies a JSON-encoded `netfoo_core::Request` (see the helper's `bus.rs`).
+    /// Applies a JSON-encoded `lanwell_core::Request` (see the helper's `bus.rs`).
     fn apply(&self, request: &str) -> zbus::Result<()>;
 
     #[zbus(property)]
@@ -45,7 +45,7 @@ pub async fn uninstall() -> Result<(), String> {
 /// prompt for it.
 async fn as_root(helper: PathBuf, command: &'static str) -> Result<(), String> {
     let pkexec = find_program("pkexec")
-        .ok_or("pkexec isn't installed, so netfoo can't ask for the password it needs.")?;
+        .ok_or("pkexec isn't installed, so lanwell can't ask for the password it needs.")?;
 
     // pkexec waits for the password prompt, so it runs off the async runtime.
     let output = tauri::async_runtime::spawn_blocking(move || {
@@ -73,23 +73,23 @@ async fn as_root(helper: PathBuf, command: &'static str) -> Result<(), String> {
 /// (target/debug in development; a bundle's sidecar when packaged).
 fn bundled_helper() -> Result<PathBuf, String> {
     let app = std::env::current_exe().map_err(|e| e.to_string())?;
-    let helper = app.with_file_name("netfoo-helper");
+    let helper = app.with_file_name("lanwell-helper");
     if helper.is_file() {
         Ok(helper)
     } else {
         Err(format!(
-            "netfoo's helper should be at {}, but it isn't there. \
+            "lanwell's helper should be at {}, but it isn't there. \
              (In development, `cargo tauri dev` builds it; check its output for errors.)",
             helper.display()
         ))
     }
 }
 
-/// A message for the person using netfoo.
+/// A message for the person using lanwell.
 fn describe(error: zbus::Error) -> String {
     match fdo::Error::from(error) {
         fdo::Error::ServiceUnknown(_) => {
-            "netfoo's helper isn't installed, so it can't change anything. \
+            "lanwell's helper isn't installed, so it can't change anything. \
              Install it from the banner at the top of the window."
                 .into()
         }
@@ -101,7 +101,7 @@ fn describe(error: zbus::Error) -> String {
 
 #[cfg(test)]
 mod tests {
-    use netfoo_core::bus::{BUS_NAME, INTERFACE, OBJECT_PATH};
+    use lanwell_core::bus::{BUS_NAME, INTERFACE, OBJECT_PATH};
     use zbus::proxy::Defaults;
 
     use super::HelperProxy;

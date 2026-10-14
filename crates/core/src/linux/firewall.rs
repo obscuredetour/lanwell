@@ -1,7 +1,7 @@
 //! Letting a file server through the firewall: ufw's rules (as commands to
 //! run, and as it saves them) and firewalld's services.
 //!
-//! netfoo only ever opens a server's one port, and with ufw only to the local
+//! lanwell only ever opens a server's one port, and with ufw only to the local
 //! network: the private address ranges, never the whole internet.
 
 use crate::fileserver::FileServer;
@@ -11,8 +11,8 @@ use crate::fileserver::FileServer;
 pub const LOCAL_NETWORKS_V4: [&str; 3] = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
 pub const LOCAL_NETWORKS_V6: [&str; 2] = ["fc00::/7", "fe80::/10"];
 
-/// Marks netfoo's ufw rules, so people (and netfoo) can tell them apart.
-pub const UFW_COMMENT: &str = "netfoo";
+/// Marks lanwell's ufw rules, so people (and lanwell) can tell them apart.
+pub const UFW_COMMENT: &str = "lanwell";
 
 /// The ufw commands (arguments after `ufw`) that let `server` in from the
 /// local network, or (`allow: false`) take those rules out again. `ipv6` is
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(commands.len(), 3);
         assert_eq!(
             commands[0].join(" "),
-            "allow from 10.0.0.0/8 to any port 445 proto tcp comment netfoo"
+            "allow from 10.0.0.0/8 to any port 445 proto tcp comment lanwell"
         );
         assert_eq!(ufw_commands(FileServer::Nfs, true, true).len(), 5);
         assert_eq!(

@@ -5,10 +5,10 @@ import type { Owner } from "./Owner";
 import type { RemoteShare } from "./RemoteShare";
 
 /**
- * A mount as netfoo keeps it: what was asked for, and whose it is.
+ * A mount as lanwell keeps it: what was asked for, and whose it is.
  */
 export type ManagedMount = { owner: Owner, share: RemoteShare, 
 /**
- * The folder it appears in here. netfoo suggests `~/Network/<share>`.
+ * The folder it appears in here. lanwell suggests `~/Network/<share>`.
  */
 mountPoint: AbsolutePath, when: MountWhen, readOnly: boolean, };

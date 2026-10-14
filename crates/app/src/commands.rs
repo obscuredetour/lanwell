@@ -2,8 +2,8 @@
 //!
 //! Errors are returned as messages to show as they are.
 
-use netfoo_core::system::{self, HelperStatus, SystemInfo};
-use netfoo_core::{FileServer, FileServerStatus, FoundServer, MountStatus, Request, State};
+use lanwell_core::system::{self, HelperStatus, SystemInfo};
+use lanwell_core::{FileServer, FileServerStatus, FoundServer, MountStatus, Request, State};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::{discovery, mounts};
@@ -14,12 +14,12 @@ pub fn system_info() -> SystemInfo {
     SystemInfo::detect()
 }
 
-/// Everything netfoo manages. Read directly (it's world-readable), so showing
+/// Everything lanwell manages. Read directly (it's world-readable), so showing
 /// it never asks for a password.
 #[tauri::command]
 pub fn load_state() -> Result<State, String> {
     #[cfg(target_os = "linux")]
-    return State::load(&netfoo_core::linux::Paths::system().state).map_err(|e| e.to_string());
+    return State::load(&lanwell_core::linux::Paths::system().state).map_err(|e| e.to_string());
 
     #[cfg(not(target_os = "linux"))]
     Ok(State::default())
@@ -28,11 +28,13 @@ pub fn load_state() -> Result<State, String> {
 /// Whether a file server is installed, running, and let through the firewall.
 #[tauri::command]
 pub async fn file_server_status(server: FileServer) -> Result<FileServerStatus, String> {
-    let opened_by_netfoo = load_state()?.firewall_opened.contains(&server);
+    let opened_by_lanwell = load_state()?.firewall_opened.contains(&server);
     // systemctl and firewall-cmd take a moment, so not on the UI's thread.
-    tauri::async_runtime::spawn_blocking(move || FileServerStatus::detect(server, opened_by_netfoo))
-        .await
-        .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        FileServerStatus::detect(server, opened_by_lanwell)
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// The people with accounts here, who shares can be opened to.
@@ -46,7 +48,7 @@ pub fn local_users() -> Vec<String> {
 #[tauri::command]
 pub fn helper_status() -> HelperStatus {
     let bundled = std::env::current_exe()
-        .map(|app| app.with_file_name("netfoo-helper"))
+        .map(|app| app.with_file_name("lanwell-helper"))
         .ok()
         .filter(|helper| helper.is_file());
     HelperStatus::detect(env!("CARGO_PKG_VERSION"), bundled.as_deref())
@@ -60,18 +62,18 @@ pub async fn install_helper() -> Result<(), String> {
     return crate::helper::install().await;
 
     #[cfg(not(target_os = "linux"))]
-    Err("netfoo can't install its helper on this system yet.".into())
+    Err("lanwell can't install its helper on this system yet.".into())
 }
 
 /// Removes the helper, after the system asks for an administrator's password.
-/// Shares stay as they are; netfoo just can't change them until it's back.
+/// Shares stay as they are; lanwell just can't change them until it's back.
 #[tauri::command]
 pub async fn uninstall_helper() -> Result<(), String> {
     #[cfg(target_os = "linux")]
     return crate::helper::uninstall().await;
 
     #[cfg(not(target_os = "linux"))]
-    Err("netfoo has no helper on this system to remove.".into())
+    Err("lanwell has no helper on this system to remove.".into())
 }
 
 /// Asks the helper to make a change. The system shows a password prompt if
@@ -86,7 +88,7 @@ pub async fn apply(request: Request) -> Result<(), String> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = request;
-        Err("netfoo can't change shares on this system yet.".into())
+        Err("lanwell can't change shares on this system yet.".into())
     }
 }
 
@@ -148,7 +150,7 @@ pub async fn list_server_exports(host: String) -> Result<Vec<String>, String> {
 }
 
 /// Opens a mount's folder in the file manager (which mounts it, if it waits
-/// to be opened). Only netfoo's own mounts can be opened this way.
+/// to be opened). Only lanwell's own mounts can be opened this way.
 #[tauri::command]
 pub fn open_mount(app: tauri::AppHandle, mount_point: String) -> Result<(), String> {
     let state = load_state()?;
@@ -157,7 +159,7 @@ pub fn open_mount(app: tauri::AppHandle, mount_point: String) -> Result<(), Stri
         .iter()
         .any(|m| m.mount.mount_point.as_str() == mount_point)
     {
-        return Err(format!("{mount_point} isn't one of netfoo's mounts."));
+        return Err(format!("{mount_point} isn't one of lanwell's mounts."));
     }
     app.opener()
         .open_path(mount_point, None::<&str>)
