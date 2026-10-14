@@ -20,24 +20,24 @@ polkit, and a Tauri + Solid app. See [docs/architecture.md](docs/architecture.md
 ## Install
 
 For x86_64 Linux, at least as new as Ubuntu 24.04 (Debian 13, Fedora 40, Arch).
-It installs Lanwell for you, in `~/.local`, and doesn't need a password:
+The app goes in `~/.local`, for you. Its helper, the part that changes
+system settings, goes in `/usr/lib/lanwell`, so the installer asks for your
+password (with sudo):
 
 ```bash
 curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh
 ```
 
 Or download [install.sh](https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh),
-read it, and run `sh install.sh`. Running it again updates Lanwell.
+read it, and run `sh install.sh`. Running it again updates Lanwell and its
+helper.
 
 Lanwell checks GitHub for a new version when it starts and once a day, and
 says at the top of the window when one is out. To stop it, untick **Check
 for new versions** at the foot of the sidebar.
 
-The first time you change something, Lanwell asks to install its helper, the
-part that changes system settings, and asks for an administrator's password.
-
-You need WebKitGTK 4.1 and polkit (install.sh says if they're missing), and
-Samba or NFS for whichever you'll use; Lanwell says what's missing.
+You need WebKitGTK 4.1 (install.sh says if it's missing), polkit, and Samba
+or NFS for whichever you'll use; Lanwell says what's missing.
 
 To remove Lanwell and its helper:
 

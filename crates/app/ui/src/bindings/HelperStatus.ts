@@ -4,4 +4,4 @@
  * Whether the privileged helper is installed, and whether it's the version
  * this app was built with (the two are released together).
  */
-export type HelperStatus = { "kind": "ready", version: string, } | { "kind": "missing" } | { "kind": "outdated", installed: string, } | { "kind": "unsupported" };
+export type HelperStatus = { "kind": "ready", version: string, } | { "kind": "missing", installable: boolean, } | { "kind": "outdated", installed: string, installable: boolean, } | { "kind": "unsupported" };

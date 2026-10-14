@@ -68,23 +68,27 @@ UI (api.ts) ──invoke──▶ app (commands.rs) ──D-Bus: Apply(json)─�
 
 ## Installing the helper
 
-A package installs the helper and its D-Bus, systemd and polkit files. A
-Lanwell that didn't come from one installs them itself: when
-`lanwell-helper --version` (run as the user) is missing or names another
-version, the app offers an Install (or Update) button, which runs
-`pkexec lanwell-helper install` with the helper that sits beside the app's own
-binary. pkexec shows the desktop's password prompt; the helper then copies
-itself to `/usr/lib/lanwell` and writes the files, which are built into it.
+`lanwell-helper install`, run as root, copies the helper to
+`/usr/lib/lanwell` and writes its D-Bus, systemd and polkit files, which are
+built into it. Once installed, the helper D-Bus runs is that root-owned copy.
 
-pkexec runs that binary as root, so it must come from the same place as the
-app: anyone who could replace it could replace the app too. Once installed,
-the helper D-Bus runs is the root-owned copy.
+Whatever runs `lanwell-helper install` runs it as root, so the copy it runs
+must be one nothing running as the user could have replaced:
 
-**Before release builds:** offer the button only when the helper beside the
-app, and the folders above it, are owned by root and writable by no one else
-(as in a deb or rpm). Otherwise anything running as the person could replace
-it, and the app's "different build" check would ask them to install it.
-Development builds (`target/debug`) are exempt.
+- **install.sh** runs it with sudo, on the helper it just downloaded and
+  checked against the release's checksum, from its temporary folder. It
+  leaves no helper beside the app in `~/.local`.
+- **The app** offers an Install (or Update) button, which runs
+  `pkexec lanwell-helper install`, only with a helper beside its own binary
+  that is root's, in folders that are root's, and that no one else can
+  write (as a deb or rpm installs it). Otherwise anything running as the
+  user could replace it, and the app's "different build" check would then
+  ask them to install the replacement. Without one, the banner says to run
+  the installer again. Development builds (`target/debug`) are exempt.
+- **A package** installs the files itself, so neither is needed.
+
+`lanwell-helper --version`, run as the user, tells the app whether the
+installed helper is missing or another version.
 
 ## Running the servers
 
@@ -243,6 +247,12 @@ The core and UI carry over; the helper and the config rendering don't.
   didn't come from a package (a development build, a downloaded bundle) can
   be set up with one button and the system's password prompt. One install
   path, `lanwell-helper install`, serves the button and the dev script.
+- **2026-10-13: install.sh installs the helper, with sudo.** Kept beside the
+  app in `~/.local`, the helper is the user's, so anything running as them
+  could replace it, and the button would then run the replacement as root.
+  So install.sh runs `lanwell-helper install` itself, on the copy it just
+  checked, and the button is only for helpers root owns (from a package) and
+  development builds.
 - **2026-10-11: Opening the firewall asks.** Starting a server when
   something's shared is what sharing means; letting it through the firewall
   is a separate choice (a laptop's firewall also guards it on others'
