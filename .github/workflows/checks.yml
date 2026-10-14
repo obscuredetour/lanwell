@@ -39,6 +39,14 @@ jobs:
       - name: TypeScript bindings are up to date
         run: git diff --exit-code -- crates/app/ui/src/bindings
 
+  scripts:
+    name: Shell scripts (shellcheck)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: shellcheck install.sh scripts/*.sh
+
   ui:
     name: UI (types, formatting, build)
     runs-on: ubuntu-24.04

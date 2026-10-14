@@ -4,3 +4,6 @@
 # The UI's dependencies and build output
 node_modules/
 /crates/app/ui/dist/
+
+# Release tarballs from scripts/package.sh
+/dist/

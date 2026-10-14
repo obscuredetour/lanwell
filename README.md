@@ -17,6 +17,32 @@ fstab, smb.conf or /etc/exports.
 For Linux; macOS maybe later. Rust core, a small privileged helper behind
 polkit, and a Tauri + Solid app. See [docs/architecture.md](docs/architecture.md).
 
+## Install
+
+For x86_64 Linux, at least as new as Ubuntu 24.04 (Debian 13, Fedora 40, Arch).
+It installs lanwell for you, in `~/.local`, and doesn't need a password:
+
+```bash
+curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh
+```
+
+Or download [install.sh](https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh),
+read it, and run `sh install.sh`. Running it again updates lanwell.
+
+The first time you change something, lanwell asks to install its helper, the
+part that changes system settings, and asks for an administrator's password.
+
+You need WebKitGTK 4.1 and polkit (install.sh says if they're missing), and
+Samba or NFS for whichever you'll use; lanwell says what's missing.
+
+To remove lanwell and its helper:
+
+```bash
+curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh -s -- --uninstall
+```
+
+Shares and network folders you set up stay as they are.
+
 ## Development
 
 You need Rust, Node 24 with pnpm, and Tauri's system libraries
@@ -61,6 +87,20 @@ pnpm --dir crates/app/ui lint
 `cargo test` also regenerates the UI's TypeScript types in
 `crates/app/ui/src/bindings` from the Rust types; commit them with the change.
 
+### Releasing
+
+Bump the version in `Cargo.toml` and `crates/app/ui/package.json`, merge, then
+tag and push:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+The Release workflow builds the tarball with `scripts/package.sh` and attaches
+it to a draft release; publish the draft once its notes are written. To try a
+build with install.sh first, run `scripts/package.sh`, then
+`LANWELL_RELEASE_URL="file://$PWD/dist" sh dist/install.sh`.
+
 ## Layout
 
 | Path | What's there |
@@ -68,7 +108,8 @@ pnpm --dir crates/app/ui lint
 | `crates/core` | The model, validation, requests, state file and config rendering. No root, no D-Bus. |
 | `crates/helper` | The privileged helper, and (in `linux/`) the files that install it. |
 | `crates/app` | The Tauri app; `ui/` is the Solid front end. |
-| `scripts` | Development tools. |
+| `scripts` | Development and packaging tools. |
+| `install.sh` | The installer, attached to each release. |
 | `docs` | Architecture and decisions. |
 
 ## License
