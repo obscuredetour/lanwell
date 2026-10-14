@@ -1,4 +1,4 @@
-<img src="crates/app/icons/logo.svg" width="80" alt="">
+<img src="crates/app/icons/source.svg" width="96" alt="">
 
 # Lanwell
 
