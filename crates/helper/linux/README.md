@@ -8,10 +8,10 @@ them built in. The list is in `src/install.rs`; keep the two in step:
 | File | Installed as |
 |---|---|
 | `lanwell-helper` (the binary) | `/usr/lib/lanwell/lanwell-helper` |
-| `io.lanwell.Helper1.service` | `/usr/share/dbus-1/system-services/io.lanwell.Helper1.service` |
-| `io.lanwell.Helper1.conf` | `/usr/share/dbus-1/system.d/io.lanwell.Helper1.conf` |
+| `io.github.obscuredetour.lanwell.Helper1.service` | `/usr/share/dbus-1/system-services/io.github.obscuredetour.lanwell.Helper1.service` |
+| `io.github.obscuredetour.lanwell.Helper1.conf` | `/usr/share/dbus-1/system.d/io.github.obscuredetour.lanwell.Helper1.conf` |
 | `lanwell-helper.service` | `/usr/lib/systemd/system/lanwell-helper.service` |
-| `io.lanwell.policy` | `/usr/share/polkit-1/actions/io.lanwell.policy` |
+| `io.github.obscuredetour.lanwell.policy` | `/usr/share/polkit-1/actions/io.github.obscuredetour.lanwell.policy` |
 
 A package that installs these files makes the Install button unnecessary:
 the app sees the helper is there and the same version, and doesn't offer it.

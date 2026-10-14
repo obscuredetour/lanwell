@@ -9,7 +9,7 @@
 <policyconfig>
   <vendor>lanwell</vendor>
 
-  <action id="io.lanwell.manage-shares">
+  <action id="io.github.obscuredetour.lanwell.manage-shares">
     <description>Share folders on the network</description>
     <message>Authentication is required to change which folders are shared on the network.</message>
     <defaults>
@@ -19,7 +19,7 @@
     </defaults>
   </action>
 
-  <action id="io.lanwell.manage-mounts">
+  <action id="io.github.obscuredetour.lanwell.manage-mounts">
     <description>Mount network shares</description>
     <message>Authentication is required to change which network shares are mounted on this computer.</message>
     <defaults>
@@ -29,7 +29,7 @@
     </defaults>
   </action>
 
-  <action id="io.lanwell.set-password">
+  <action id="io.github.obscuredetour.lanwell.set-password">
     <description>Set a file sharing password</description>
     <message>Authentication is required to set a user's file sharing password.</message>
     <defaults>

@@ -2,7 +2,7 @@
 # starting it is handed to systemd (SystemdService), which runs it as
 # lanwell-helper.service.
 [D-BUS Service]
-Name=io.lanwell.Helper1
+Name=io.github.obscuredetour.lanwell.Helper1
 Exec=/usr/lib/lanwell/lanwell-helper
 User=root
 SystemdService=lanwell-helper.service

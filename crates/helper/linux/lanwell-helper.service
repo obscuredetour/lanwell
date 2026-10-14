@@ -3,7 +3,7 @@ Description=lanwell helper (applies changes to shared folders)
 
 [Service]
 Type=dbus
-BusName=io.lanwell.Helper1
+BusName=io.github.obscuredetour.lanwell.Helper1
 ExecStart=/usr/lib/lanwell/lanwell-helper
 
 # The helper only writes under /etc and runs Samba's and NFS's own tools. It

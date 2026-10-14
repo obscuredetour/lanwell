@@ -22,20 +22,20 @@ use crate::services::run;
 /// same files in the same places (see `linux/README.md`).
 const FILES: [(&str, &str); 4] = [
     (
-        "/usr/share/dbus-1/system-services/io.lanwell.Helper1.service",
-        include_str!("../linux/io.lanwell.Helper1.service"),
+        "/usr/share/dbus-1/system-services/io.github.obscuredetour.lanwell.Helper1.service",
+        include_str!("../linux/io.github.obscuredetour.lanwell.Helper1.service"),
     ),
     (
-        "/usr/share/dbus-1/system.d/io.lanwell.Helper1.conf",
-        include_str!("../linux/io.lanwell.Helper1.conf"),
+        "/usr/share/dbus-1/system.d/io.github.obscuredetour.lanwell.Helper1.conf",
+        include_str!("../linux/io.github.obscuredetour.lanwell.Helper1.conf"),
     ),
     (
         "/usr/lib/systemd/system/lanwell-helper.service",
         include_str!("../linux/lanwell-helper.service"),
     ),
     (
-        "/usr/share/polkit-1/actions/io.lanwell.policy",
-        include_str!("../linux/io.lanwell.policy"),
+        "/usr/share/polkit-1/actions/io.github.obscuredetour.lanwell.policy",
+        include_str!("../linux/io.github.obscuredetour.lanwell.policy"),
     ),
 ];
 

@@ -11,9 +11,9 @@ use zbus::fdo;
 // The proxy macro needs literal names; the test below keeps them in step with
 // lanwell_core::bus, which the helper uses.
 #[zbus::proxy(
-    interface = "io.lanwell.Helper1",
-    default_service = "io.lanwell.Helper1",
-    default_path = "/io/lanwell/Helper1"
+    interface = "io.github.obscuredetour.lanwell.Helper1",
+    default_service = "io.github.obscuredetour.lanwell.Helper1",
+    default_path = "/io/github/obscuredetour/lanwell/Helper1"
 )]
 trait Helper {
     /// Applies a JSON-encoded `lanwell_core::Request` (see the helper's `bus.rs`).

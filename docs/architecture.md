@@ -60,8 +60,10 @@ UI (api.ts) ──invoke──▶ app (commands.rs) ──D-Bus: Apply(json)─�
 ```
 
 - The helper is started by D-Bus on first use and exits after two idle minutes.
-- Each kind of request has its own polkit action (`io.lanwell.manage-shares`,
-  `io.lanwell.set-password`), so an administrator can allow one without the other.
+- Each kind of request has its own polkit action
+  (`io.github.obscuredetour.lanwell.manage-shares`,
+  `io.github.obscuredetour.lanwell.set-password`), so an administrator can
+  allow one without the other.
 - Requests are applied one at a time.
 
 ## Installing the helper
