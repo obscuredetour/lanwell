@@ -1,10 +1,11 @@
 # Icons
 
-A placeholder. `source.svg` is the original; to regenerate the rest after changing it:
+`logo.svg` is the logo: an "lw" whose w starts with the l, in the UI's accent
+violet. `source.svg` is the app icon, the logo on a violet tile; to regenerate
+the rest after changing it:
 
 ```bash
-rsvg-convert -w 1024 -h 1024 source.svg -o /tmp/lanwell-icon.png
-cargo tauri icon /tmp/lanwell-icon.png -o .
+cargo tauri icon source.svg -o .
 ```
 
 Then delete the `android/`, `ios/` and `Square*`/`StoreLogo` files it also makes (lanwell doesn't target those).

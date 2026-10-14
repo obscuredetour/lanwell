@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- "lw": the w's first stroke runs up to an l, with a node on each top end.
+       The UI's accent violet, lighter on dark backgrounds. -->
+  <style>
+    .line { stroke: #7438a8; }
+    .node { fill: #7438a8; }
+    @media (prefers-color-scheme: dark) {
+      .line { stroke: #bf97ed; }
+      .node { fill: #bf97ed; }
+    }
+  </style>
+  <path class="line" d="M360 276 V796 L512 604 L664 796 V516" fill="none" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle class="node" cx="360" cy="276" r="80"/>
+  <circle class="node" cx="664" cy="516" r="80"/>
+</svg>

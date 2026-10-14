@@ -1,19 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The logo (logo.svg) on a tile. The violets come from the UI's accent
+       (#7438a8, and #bf97ed / #1b1030 in the dark theme, styles.css). -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2bb3a3"/>
-      <stop offset="1" stop-color="#1d6f8c"/>
+      <stop offset="0" stop-color="#925ec4"/>
+      <stop offset="1" stop-color="#5e2e8a"/>
     </linearGradient>
   </defs>
   <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
-  <g stroke="#ffffff" stroke-width="44" stroke-linecap="round" fill="none" opacity="0.9">
-    <line x1="512" y1="360" x2="300" y2="660"/>
-    <line x1="512" y1="360" x2="724" y2="660"/>
-    <line x1="300" y1="680" x2="724" y2="680"/>
-  </g>
   <g fill="#ffffff">
-    <circle cx="512" cy="340" r="110"/>
-    <circle cx="300" cy="680" r="96"/>
-    <circle cx="724" cy="680" r="96"/>
+    <path d="M390 320 V736 L512 582 L634 736 V512" fill="none" stroke="#ffffff" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="390" cy="320" r="64"/>
+    <circle cx="634" cy="512" r="64"/>
   </g>
 </svg>
