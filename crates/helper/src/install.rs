@@ -71,7 +71,7 @@ pub fn install() -> Result<(), InstallError> {
     }
 
     reload_system()?;
-    println!("Installed {HELPER_PATH}. D-Bus starts it when lanwell needs it.");
+    println!("Installed {HELPER_PATH}. D-Bus starts it when Lanwell needs it.");
     Ok(())
 }
 

@@ -79,7 +79,7 @@ pub fn render_mount_unit(managed: &ManagedMount, credentials: &str) -> String {
     format!(
         "{GENERATED_HEADER}\n\
          [Unit]\n\
-         Description=lanwell: {address}\n\
+         Description=Lanwell: {address}\n\
          Wants=network-online.target\n\
          After=network-online.target\n\
          \n\
@@ -136,7 +136,7 @@ pub fn render_automount_unit(managed: &ManagedMount) -> String {
     format!(
         "{GENERATED_HEADER}\n\
          [Unit]\n\
-         Description=lanwell: {address} (mounted when first opened)\n\
+         Description=Lanwell: {address} (mounted when first opened)\n\
          \n\
          [Automount]\n\
          Where={where_}\n\

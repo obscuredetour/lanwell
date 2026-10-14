@@ -29,13 +29,13 @@ export function HelperBanner(props: { status: HelperStatus | undefined; onChange
     <Switch>
       <Match when={props.status?.kind === 'missing'}>
         <Banner
-          message="To change what's shared, lanwell needs a small system helper. Installing it asks for an administrator's password, once."
+          message="To change what's shared, Lanwell needs a small system helper. Installing it asks for an administrator's password, once."
           button="Install helper"
         />
       </Match>
       <Match when={props.status?.kind === 'outdated'}>
         <Banner
-          message="lanwell's system helper is from a different build of lanwell. Update it to keep changes working."
+          message="Lanwell's system helper is from a different build of Lanwell. Update it to keep changes working."
           button="Update helper"
         />
       </Match>

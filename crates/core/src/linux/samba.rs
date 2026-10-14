@@ -53,7 +53,7 @@ pub fn with_include(smb_conf: &str, include_path: &str) -> Option<String> {
     if !out.is_empty() && !out.ends_with('\n') {
         out.push('\n');
     }
-    out.push_str("\n# Shares managed by lanwell\n");
+    out.push_str("\n# Shares managed by Lanwell\n");
     out.push_str(&line);
     out.push('\n');
     Some(out)
@@ -68,15 +68,15 @@ fn include_line(include_path: &str) -> String {
 /// include line.
 pub fn new_smb_conf(include_path: &str) -> String {
     format!(
-        "# Created by lanwell, because there was no smb.conf. It's yours to edit:\n\
-         # lanwell only needs the include line at the end.\n\
+        "# Created by Lanwell, because there was no smb.conf. It's yours to edit:\n\
+         # Lanwell only needs the include line at the end.\n\
          \n\
          [global]\n   \
             server role = standalone server\n   \
             # Lets shares marked as open to guests work without a password.\n   \
             map to guest = bad user\n\
          \n\
-         # Shares managed by lanwell\n\
+         # Shares managed by Lanwell\n\
          {}\n",
         include_line(include_path)
     )

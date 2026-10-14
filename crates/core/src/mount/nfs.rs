@@ -97,7 +97,7 @@ fn check_export_path(path: &str) -> Result<String, InvalidValue> {
     };
     if has_control_chars(trimmed) || trimmed.split('/').any(|part| part == "..") {
         return Err(invalid(format!(
-            "\"{trimmed}\" isn't a folder path lanwell can use."
+            "\"{trimmed}\" isn't a folder path Lanwell can use."
         )));
     }
     Ok(trimmed.to_string())

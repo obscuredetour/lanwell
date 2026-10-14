@@ -125,7 +125,7 @@ impl SmbAddress {
 fn check_name(name: &str, what: &str) -> Result<(), InvalidValue> {
     if name == "." || name == ".." || has_control_chars(name) || name.chars().count() > 255 {
         return Err(invalid(format!(
-            "\"{name}\" isn't a {what} lanwell can use."
+            "\"{name}\" isn't a {what} Lanwell can use."
         )));
     }
     Ok(())

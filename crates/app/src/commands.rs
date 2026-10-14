@@ -62,7 +62,7 @@ pub async fn install_helper() -> Result<(), String> {
     return crate::helper::install().await;
 
     #[cfg(not(target_os = "linux"))]
-    Err("lanwell can't install its helper on this system yet.".into())
+    Err("Lanwell can't install its helper on this system yet.".into())
 }
 
 /// Removes the helper, after the system asks for an administrator's password.
@@ -73,7 +73,7 @@ pub async fn uninstall_helper() -> Result<(), String> {
     return crate::helper::uninstall().await;
 
     #[cfg(not(target_os = "linux"))]
-    Err("lanwell has no helper on this system to remove.".into())
+    Err("Lanwell has no helper on this system to remove.".into())
 }
 
 /// Asks the helper to make a change. The system shows a password prompt if
@@ -88,7 +88,7 @@ pub async fn apply(request: Request) -> Result<(), String> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = request;
-        Err("lanwell can't change shares on this system yet.".into())
+        Err("Lanwell can't change shares on this system yet.".into())
     }
 }
 
@@ -159,7 +159,7 @@ pub fn open_mount(app: tauri::AppHandle, mount_point: String) -> Result<(), Stri
         .iter()
         .any(|m| m.mount.mount_point.as_str() == mount_point)
     {
-        return Err(format!("{mount_point} isn't one of lanwell's mounts."));
+        return Err(format!("{mount_point} isn't one of Lanwell's mounts."));
     }
     app.opener()
         .open_path(mount_point, None::<&str>)

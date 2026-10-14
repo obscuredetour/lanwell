@@ -47,4 +47,4 @@ jobs:
       - name: Draft the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes --title "lanwell ${GITHUB_REF_NAME#v}" dist/*
+        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes --title "Lanwell ${GITHUB_REF_NAME#v}" dist/*

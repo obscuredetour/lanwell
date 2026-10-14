@@ -1,6 +1,6 @@
-# lanwell architecture
+# Lanwell architecture
 
-lanwell is a desktop app for mounting other machines' shares (SMB, as
+Lanwell is a desktop app for mounting other machines' shares (SMB, as
 folders here) and for sharing folders on the network (Samba and NFS). This document records how
 the pieces fit and why. Change the decisions at the end deliberately, and
 update this file when you do.
@@ -9,7 +9,7 @@ update this file when you do.
 
 - **Plain-language network sharing**: no smb.conf, /etc/exports or fstab
   knowledge needed.
-- **Never break a hand-configured system.** lanwell writes files of its own and
+- **Never break a hand-configured system.** Lanwell writes files of its own and
   leaves everyone else's alone (one `include` line in smb.conf is the only
   exception).
 - **Honest about the protocols.** Samba has users and passwords; NFS trusts
@@ -69,7 +69,7 @@ UI (api.ts) ──invoke──▶ app (commands.rs) ──D-Bus: Apply(json)─�
 ## Installing the helper
 
 A package installs the helper and its D-Bus, systemd and polkit files. A
-lanwell that didn't come from one installs them itself: when
+Lanwell that didn't come from one installs them itself: when
 `lanwell-helper --version` (run as the user) is missing or names another
 version, the app offers an Install (or Update) button, which runs
 `pkexec lanwell-helper install` with the helper that sits beside the app's own
@@ -100,7 +100,7 @@ network**. With ufw that's one rule per private address range (10.x,
 172.16–31.x, 192.168.x, and IPv6's local ranges if ufw handles IPv6), only
 for the server's port (445 for SMB, 2049 for NFS 4), commented `lanwell`.
 With firewalld it's the `samba` or `nfs` service in the default zone, whose
-trust level decides who's let in. lanwell records what it opened, and
+trust level decides who's let in. Lanwell records what it opened, and
 **Stop allowing** only takes that back. The status is read without root:
 ufw's saved rules where they're readable, `firewall-cmd --query-service`.
 
@@ -120,14 +120,14 @@ only be set for people's accounts (UID 1000 and up), not root or system ones.
 The app warns before exporting read-write over NFS to every machine (`*`),
 since NFS trusts what each client says about who its users are.
 
-## Files lanwell owns (Linux)
+## Files Lanwell owns (Linux)
 
 | File | What it is |
 |---|---|
-| `/etc/lanwell/state.json` | The source of truth: every share and export lanwell manages. World-readable, no secrets, so the app reads it without a password. |
+| `/etc/lanwell/state.json` | The source of truth: every share and export Lanwell manages. World-readable, no secrets, so the app reads it without a password. |
 | `/etc/samba/lanwell.conf` | Generated share sections. Included from smb.conf. |
 | `/etc/exports.d/lanwell.exports` | Generated exports. `exportfs` reads every file in exports.d. |
-| `/etc/samba/smb.conf` | Not lanwell's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), lanwell writes a minimal one, which is the user's from then on. |
+| `/etc/samba/smb.conf` | Not Lanwell's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), Lanwell writes a minimal one, which is the user's from then on. |
 | `/etc/systemd/system/<mount point>.mount` | A mount, as a systemd unit named after its folder (`systemd-escape --path`). |
 | `/etc/systemd/system/<mount point>.automount` | For a mount that waits to be opened: mounts it on first access. |
 | `/etc/lanwell/credentials/<mount point>` | A mount's user name and password, for mount.cifs. Mode 600, in a 700 folder: only root can read them. Never in the state file. |
@@ -149,8 +149,8 @@ person's choice:
 
 - **When first opened** (the default): an `.automount` unit is enabled, and
   the share mounts when something opens the folder. Startup never waits for
-  the server. lanwell also mounts it once straight away, so a wrong password
-  shows up while the person is still in lanwell.
+  the server. Lanwell also mounts it once straight away, so a wrong password
+  shows up while the person is still in Lanwell.
 - **At startup**: the `.mount` unit is enabled itself (`WantedBy=remote-fs.target`).
   Startup waits for the server, up to `TimeoutSec=30`, every time it's off;
   the UI says so before it's chosen.
@@ -218,12 +218,12 @@ The core and UI carry over; the helper and the config rendering don't.
    ([issue #1](https://github.com/obscuredetour/lanwell/issues/1)). Flatpak's
    sandbox can't run pkexec on the host, so it doesn't fit.
 3. **Finding Windows PCs** (WS-Discovery), which don't announce over mDNS.
-   Not urgent: no one working on lanwell has a Windows PC to test with. When
+   Not urgent: no one working on Lanwell has a Windows PC to test with. When
    it's requested or built, it will need someone with one to help test (a
-   PC sharing a folder on the same network as lanwell).
+   PC sharing a folder on the same network as Lanwell).
 
 4. **macOS, later, if people want it.** macOS already shares and mounts SMB
-   from its own settings, so lanwell would add little there for a lot of work:
+   from its own settings, so Lanwell would add little there for a lot of work:
    a signed, notarized helper (see "macOS (later, if wanted)" above). Its
    real gap is NFS exports, which have no GUI. The shared core and per-OS
    helpers keep the door open.
@@ -235,11 +235,11 @@ The core and UI carry over; the helper and the config rendering don't.
   validation happens as it's decoded. D-Bus-native types would duplicate the
   model for no gain while both ends are ours.
 - **2026-10-11: A state file, not parsing config.** Parsing smb.conf and
-  exports back is fragile and would tempt lanwell to edit what it didn't write.
+  exports back is fragile and would tempt Lanwell to edit what it didn't write.
 - **2026-10-11: polkit via D-Bus, not pkexec.** pkexec runs a whole program as
   root with arguments the caller chose; a D-Bus service accepts only its typed
   requests and identifies the caller race-free.
-- **2026-10-11: The helper installs itself, with pkexec.** So a lanwell that
+- **2026-10-11: The helper installs itself, with pkexec.** So a Lanwell that
   didn't come from a package (a development build, a downloaded bundle) can
   be set up with one button and the system's password prompt. One install
   path, `lanwell-helper install`, serves the button and the dev script.

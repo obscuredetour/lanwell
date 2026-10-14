@@ -20,7 +20,7 @@ export function AboutCard(props: { status: UpdateStatus | undefined; onChanged: 
   return (
     <div class="px-2.5 pt-2 text-xs text-fg-muted">
       <Show when={version()}>
-        <div>lanwell {version()}</div>
+        <div>Lanwell {version()}</div>
       </Show>
       <Show when={props.status && props.status.kind !== 'unmanaged'}>
         <label class="mt-1 flex items-center gap-2">

@@ -45,7 +45,7 @@ pub async fn uninstall() -> Result<(), String> {
 /// prompt for it.
 async fn as_root(helper: PathBuf, command: &'static str) -> Result<(), String> {
     let pkexec = find_program("pkexec")
-        .ok_or("pkexec isn't installed, so lanwell can't ask for the password it needs.")?;
+        .ok_or("pkexec isn't installed, so Lanwell can't ask for the password it needs.")?;
 
     // pkexec waits for the password prompt, so it runs off the async runtime.
     let output = tauri::async_runtime::spawn_blocking(move || {
@@ -78,7 +78,7 @@ fn bundled_helper() -> Result<PathBuf, String> {
         Ok(helper)
     } else {
         Err(format!(
-            "lanwell's helper should be at {}, but it isn't there. \
+            "Lanwell's helper should be at {}, but it isn't there. \
              (In development, `cargo tauri dev` builds it; check its output for errors.)",
             helper.display()
         ))
@@ -89,7 +89,7 @@ fn bundled_helper() -> Result<PathBuf, String> {
 fn describe(error: zbus::Error) -> String {
     match fdo::Error::from(error) {
         fdo::Error::ServiceUnknown(_) => {
-            "lanwell's helper isn't installed, so it can't change anything. \
+            "Lanwell's helper isn't installed, so it can't change anything. \
              Install it from the banner at the top of the window."
                 .into()
         }

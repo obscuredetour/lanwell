@@ -34,5 +34,5 @@ fn main() {
             updates::open_release_notes,
         ])
         .run(tauri::generate_context!())
-        .expect("lanwell couldn't start");
+        .expect("Lanwell couldn't start");
 }

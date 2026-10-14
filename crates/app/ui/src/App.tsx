@@ -51,7 +51,7 @@ export function App() {
   return (
     <div class="flex h-full">
       <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-border bg-panel p-3">
-        <h1 class="px-2.5 pt-1 pb-1 text-lg font-semibold">lanwell</h1>
+        <h1 class="px-2.5 pt-1 pb-1 text-lg font-semibold">Lanwell</h1>
         <NavHeading>On other computers</NavHeading>
         <NavItem page="mounts" icon={<HardDrive size={18} />} label="Network folders" detail="Shares mounted here" />
         <NavHeading>Shared from here</NavHeading>

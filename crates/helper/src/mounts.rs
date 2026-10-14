@@ -60,7 +60,7 @@ pub fn set(
     if let Some(old) = moved_from
         && !is_ours(old)
     {
-        return Err(InvalidValue(format!("{old} isn't one of lanwell's mounts.")).into());
+        return Err(InvalidValue(format!("{old} isn't one of Lanwell's mounts.")).into());
     }
     let ours = is_ours(&mount.mount_point);
     if ours {
@@ -69,7 +69,7 @@ pub fn set(
         services.disable_now(&names.mount);
     } else if services.unit_in_use(&names.mount) || services.unit_in_use(&names.automount) {
         return Err(ApplyError::MountPoint(format!(
-            "{} already has a mount that lanwell didn't set up, so lanwell leaves it alone.",
+            "{} already has a mount that Lanwell didn't set up, so Lanwell leaves it alone.",
             mount.mount_point
         )));
     }
@@ -138,7 +138,7 @@ pub fn remove(
         .iter()
         .any(|other| &other.mount.mount_point == mount_point)
     {
-        return Err(InvalidValue(format!("{mount_point} isn't one of lanwell's mounts.")).into());
+        return Err(InvalidValue(format!("{mount_point} isn't one of Lanwell's mounts.")).into());
     }
     let names = UnitNames::for_mount_point(mount_point);
     services.disable_now(&names.automount);
