@@ -5,7 +5,7 @@ use std::process::Command;
 
 use lanwell_core::Request;
 use lanwell_core::linux::HELPER_PATH;
-use lanwell_core::system::find_program;
+use lanwell_core::system::{self, find_program};
 use zbus::fdo;
 
 // The proxy macro needs literal names; the test below keeps them in step with
@@ -69,19 +69,30 @@ async fn as_root(helper: PathBuf, command: &'static str) -> Result<(), String> {
     }
 }
 
-/// The helper built and shipped with this app: beside the app's own binary
-/// (target/debug in development; a bundle's sidecar when packaged).
-fn bundled_helper() -> Result<PathBuf, String> {
+/// The helper beside the app's own binary, if the app may run it as root.
+/// In development (target/debug) it always may. Otherwise only if it, and
+/// every folder above it, is root's and no one else's to change, as a package
+/// installs it: a copy anything running as the user could replace would get
+/// root through the Update helper button. install.sh installs the helper
+/// itself, and leaves none beside the app.
+pub fn bundled_helper() -> Result<PathBuf, String> {
+    const RUN_INSTALLER: &str = "Run Lanwell's installer again to install its helper.";
     let app = std::env::current_exe().map_err(|e| e.to_string())?;
     let helper = app.with_file_name("lanwell-helper");
-    if helper.is_file() {
+    if cfg!(debug_assertions) {
+        if helper.is_file() {
+            Ok(helper)
+        } else {
+            Err(format!(
+                "Lanwell's helper should be at {}, but it isn't there. \
+                 (`cargo tauri dev` builds it; check its output for errors.)",
+                helper.display()
+            ))
+        }
+    } else if helper.is_file() && system::root_owned(&helper) {
         Ok(helper)
     } else {
-        Err(format!(
-            "Lanwell's helper should be at {}, but it isn't there. \
-             (In development, `cargo tauri dev` builds it; check its output for errors.)",
-            helper.display()
-        ))
+        Err(RUN_INSTALLER.into())
     }
 }
 

@@ -47,10 +47,12 @@ pub fn local_users() -> Vec<String> {
 /// installed helper its version; doesn't start it as root.
 #[tauri::command]
 pub fn helper_status() -> HelperStatus {
-    let bundled = std::env::current_exe()
-        .map(|app| app.with_file_name("lanwell-helper"))
-        .ok()
-        .filter(|helper| helper.is_file());
+    // Only a helper the app may run as root counts: one anything could replace
+    // mustn't decide that the installed one needs updating.
+    #[cfg(target_os = "linux")]
+    let bundled = crate::helper::bundled_helper().ok();
+    #[cfg(not(target_os = "linux"))]
+    let bundled: Option<std::path::PathBuf> = None;
     HelperStatus::detect(env!("CARGO_PKG_VERSION"), bundled.as_deref())
 }
 

@@ -6,10 +6,8 @@
 #   install.sh                           the installer, for the release's assets
 #   latest.json                          the version, which the app checks for updates
 #
-# The release workflow runs this on a tag; it works the same locally. To try
-# install.sh against the result without a release:
-#
-#   LANWELL_RELEASE_URL="file://$PWD/dist" sh dist/install.sh
+# The release workflow runs this on a tag; it works the same locally, from
+# any folder, and ends by printing how to try install.sh on the result.
 
 set -euo pipefail
 
@@ -48,3 +46,6 @@ printf '{"version": "%s"}\n' "$version" >dist/latest.json
 
 echo "Packaged lanwell $version:"
 ls -l dist
+echo
+echo "To try it with install.sh, from any folder:"
+echo "  LANWELL_RELEASE_URL=\"file://$repo/dist\" sh \"$repo/dist/install.sh\""

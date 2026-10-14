@@ -75,10 +75,16 @@ pub enum HelperStatus {
     Ready {
         version: String,
     },
-    Missing,
+    /// Not installed. `installable`: the app can install it itself, from a
+    /// helper beside it that it trusts (see [`root_owned`]); if not, install.sh
+    /// or a package does.
+    Missing {
+        installable: bool,
+    },
     /// Installed, but a different version (`installed`).
     Outdated {
         installed: String,
+        installable: bool,
     },
     /// lanwell can't install a helper on this system yet.
     Unsupported,
@@ -88,10 +94,10 @@ impl HelperStatus {
     /// Asks the installed helper its version (`lanwell-helper --version`, which
     /// needs no root) and compares it with `expected`.
     ///
-    /// `bundled` is the helper that came with the app, if there is one beside
-    /// it. Builds of the same version can differ (in development they always
-    /// share one), so if it isn't byte for byte the installed one, the
-    /// installed one is outdated too.
+    /// `bundled` is the helper that came with the app, if there's one beside
+    /// it that the app may run as root. Builds of the same version can differ
+    /// (in development they always share one), so if it isn't byte for byte
+    /// the installed one, the installed one is outdated too.
     pub fn detect(expected: &str, bundled: Option<&Path>) -> Self {
         if !cfg!(target_os = "linux") {
             return Self::Unsupported;
@@ -100,7 +106,9 @@ impl HelperStatus {
             .arg("--version")
             .output()
         else {
-            return Self::Missing;
+            return Self::Missing {
+                installable: bundled.is_some(),
+            };
         };
         // "lanwell-helper 0.1.0"
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -114,8 +122,33 @@ impl HelperStatus {
         } else {
             Self::Outdated {
                 installed: installed.to_string(),
+                installable: bundled.is_some(),
             }
         }
+    }
+}
+
+/// Whether `path`, and every folder above it, is owned by root and writable
+/// by no one else, as a package installs files. Then nothing running as the
+/// user could have replaced it, so running it as root gives them nothing.
+pub fn root_owned(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        // Symlinks resolved, so it's the file that runs and its real folders.
+        let Ok(path) = std::fs::canonicalize(path) else {
+            return false;
+        };
+        path.ancestors().all(|path| {
+            std::fs::symlink_metadata(path)
+                .is_ok_and(|metadata| metadata.uid() == 0 && metadata.mode() & 0o022 == 0)
+        })
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        false
     }
 }
 
@@ -278,6 +311,20 @@ fn parse_local_users(passwd: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn root_owned_needs_root_and_no_one_else_writing() {
+        assert!(root_owned(Path::new("/usr")));
+        // Root's, but anyone can write to it.
+        assert!(!root_owned(Path::new("/tmp")));
+        assert!(!root_owned(Path::new("/no/such/file")));
+        if user_id() != Some(0) {
+            let dir = tempfile::tempdir().unwrap();
+            let helper = dir.path().join("lanwell-helper");
+            std::fs::write(&helper, "").unwrap();
+            assert!(!root_owned(&helper));
+        }
+    }
 
     #[test]
     fn local_users_skip_system_accounts() {

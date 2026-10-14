@@ -1,11 +1,11 @@
 #!/bin/sh
-# Installs lanwell for you (not system-wide) from its latest release:
+# Installs Lanwell from its latest release:
 #
 #   curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh
 #
-# The app goes in ~/.local and needs no password. lanwell asks for one later,
-# when it installs its helper (the part that changes system settings).
-# Running this again updates lanwell.
+# The app goes in ~/.local, for you. Its helper, the part that changes system
+# settings, goes in /usr/lib/lanwell, so sudo asks for your password.
+# Running this again updates both.
 #
 #   sh install.sh --uninstall    removes lanwell, and its helper if it's installed
 #
@@ -41,11 +41,12 @@ main() {
 
 install() {
   [ "$(id -u)" -ne 0 ] ||
-    fail "run this as yourself, not as root. Lanwell installs for you, and asks for an administrator's password when it needs one."
+    fail "run this as yourself, not as root. Lanwell installs for you, and asks for an administrator's password for its helper."
   [ "$(uname -s)" = Linux ] || fail "Lanwell is for Linux."
   arch="$(uname -m)"
   [ "$arch" = x86_64 ] || fail "Lanwell's releases are for x86_64 so far, and this is $arch."
   command -v curl >/dev/null || fail "curl isn't installed."
+  command -v sudo >/dev/null || fail "sudo isn't installed, and Lanwell needs it to install its helper."
 
   if [ -n "${LANWELL_RELEASE_URL:-}" ]; then
     url="$LANWELL_RELEASE_URL"
@@ -67,15 +68,23 @@ install() {
   new="$tmp/lanwell"
 
   check_libraries "$new/lanwell"
-  command -v pkexec >/dev/null ||
-    say "Note: pkexec isn't installed. Lanwell needs it to install its helper; it's in your distribution's polkit (or pkexec) package."
+
+  # The helper runs as root, so it's installed from the download just checked,
+  # and goes only where root alone can change it: never beside the app, where
+  # anything running as you could replace it. First, so that if sudo is
+  # refused, nothing has changed.
+  say "Installing Lanwell's helper in /usr/lib/lanwell; sudo asks for your password."
+  sudo "$new/lanwell-helper" install >/dev/null ||
+    fail "the helper wasn't installed, so nothing was. Run this again to try again."
 
   mkdir -p "$lib" "$bin" "$data/applications"
   # Rename into place, so a lanwell that's running keeps the files it started with.
-  for file in lanwell lanwell-helper VERSION; do
+  for file in lanwell VERSION; do
     cp "$new/$file" "$lib/.$file.new"
     mv -f "$lib/.$file.new" "$lib/$file"
   done
+  # Earlier installs kept a copy of the helper here.
+  rm -f "$lib/lanwell-helper"
   ln -sfn "$lib/lanwell" "$bin/lanwell"
 
   # The menu entry runs lanwell by its full path; ~/.local/bin isn't always on PATH.
@@ -90,16 +99,12 @@ install() {
     cp "$new/icons/$size.png" "$icons/${size}x$size/apps/lanwell.png"
   done
 
-  say "Installed Lanwell $(cat "$lib/VERSION") in $lib."
+  say "Installed Lanwell $(cat "$lib/VERSION") in $lib, and its helper in $(dirname "$helper")."
   case ":$PATH:" in
     *":$bin:"*) ;;
     *) say "$bin isn't on your PATH, so start Lanwell from your app menu (or add it to PATH)." ;;
   esac
-  if [ -e "$helper" ]; then
-    say "Open Lanwell; if its helper is older than this version, it offers to update it."
-  else
-    say "Open Lanwell from your app menu. To make changes, it asks to install its helper first."
-  fi
+  say "Open Lanwell from your app menu (if it's open, close it and open it again)."
 }
 
 # Fails, saying what to install, if lanwell can't run here.
@@ -136,11 +141,7 @@ uninstall() {
 
   if [ -e "$helper" ]; then
     say "Removing Lanwell's helper, which needs an administrator's password."
-    if command -v sudo >/dev/null; then
-      sudo "$helper" uninstall
-    else
-      pkexec "$helper" uninstall
-    fi
+    sudo "$helper" uninstall >/dev/null
   fi
 
   rm -f "$lib/lanwell" "$lib/lanwell-helper" "$lib/VERSION"

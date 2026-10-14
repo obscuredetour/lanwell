@@ -198,6 +198,15 @@ export function createAction() {
   return { busy, error, run, reset };
 }
 
+/** The command that installs or updates Lanwell and its helper; a click selects all of it, to copy. */
+export function InstallCommand() {
+  return (
+    <code class="mt-2 block rounded bg-field px-2 py-1 text-xs break-all select-all">
+      curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh
+    </code>
+  );
+}
+
 export function ErrorText(props: { message: string | null }) {
   return (
     <Show when={props.message}>
