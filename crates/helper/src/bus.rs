@@ -49,7 +49,7 @@ struct Helper {
     applying: Mutex<()>,
 }
 
-#[zbus::interface(name = "io.lanwell.Helper1")]
+#[zbus::interface(name = "io.github.obscuredetour.lanwell.Helper1")]
 impl Helper {
     /// Applies `request`, a JSON-encoded `lanwell_core::Request`, if polkit
     /// allows the caller to.

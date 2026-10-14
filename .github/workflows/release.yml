@@ -1,0 +1,50 @@
+# Runs when a version tag (v0.1.0) is pushed: builds the tarball install.sh
+# downloads, with scripts/package.sh, and attaches it to a draft release.
+# Publish the draft on GitHub once its notes are written; install.sh's
+# "latest" download only sees published releases.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux x86_64
+    # Its glibc is the oldest lanwell runs on (install.sh says so).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: The tag matches the version
+        run: |
+          pkgid="$(cargo pkgid -p lanwell)"
+          ui="$(jq -r .version crates/app/ui/package.json)"
+          if [[ "$GITHUB_REF_NAME" != "v${pkgid##*@}" || "$ui" != "${pkgid##*@}" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME, Cargo.toml ${pkgid##*@}, package.json $ui: bump them together."
+            exit 1
+          fi
+      - name: System libraries Tauri builds against
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install tauri-cli --version 2.12.1 --locked
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: crates/app/ui/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: crates/app/ui/pnpm-lock.yaml
+      - run: pnpm --dir crates/app/ui install --frozen-lockfile
+      - run: scripts/package.sh
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes --title "lanwell ${GITHUB_REF_NAME#v}" dist/*

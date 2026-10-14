@@ -1,21 +1,32 @@
 import type { JSX } from 'solid-js';
-import { createResource, createSignal, Match, Show, Switch } from 'solid-js';
+import { createResource, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
-import { helperStatus, loadState, messageOf, systemInfo } from './api';
+import { helperStatus, loadState, messageOf, systemInfo, type UpdateStatus, updateStatus } from './api';
 import { FolderOpen, HardDrive, Network } from './icons';
+import { AboutCard } from './components/AboutCard';
 import { HelperBanner } from './components/HelperBanner';
 import { HelperCard } from './components/HelperCard';
 import { MountsPage } from './components/mounts/MountsPage';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
 import { Notice } from './components/ui';
+import { UpdateBanner } from './components/UpdateBanner';
 
 type Page = 'mounts' | 'samba' | 'nfs';
+
+const DAY = 24 * 60 * 60 * 1000;
 
 export function App() {
   const [info] = createResource(systemInfo);
   const [state, { refetch }] = createResource(loadState);
   const [helper, { refetch: refetchHelper }] = createResource(helperStatus);
+  // At launch, then once a day. A check that fails keeps what the last one found.
+  const [update, { refetch: refetchUpdate }] = createResource<UpdateStatus>(async (_, { value }) => {
+    const status = await updateStatus();
+    return status.kind === 'unreachable' && value?.kind === 'available' ? value : status;
+  });
+  const daily = setInterval(refetchUpdate, DAY);
+  onCleanup(() => clearInterval(daily));
   const [page, setPage] = createSignal<Page>('mounts');
 
   const NavItem = (props: { page: Page; icon: JSX.Element; label: string; detail: string }) => (
@@ -53,10 +64,12 @@ export function App() {
         <NavItem page="nfs" icon={<Network size={18} />} label="NFS exports" detail="For Linux and other Unix" />
         <div class="mt-auto">
           <HelperCard status={helper()} onChanged={refetchHelper} />
+          <AboutCard status={update()} onChanged={refetchUpdate} />
         </div>
       </nav>
 
       <main class="flex-1 overflow-y-auto p-6">
+        <UpdateBanner status={update()} />
         <HelperBanner status={helper()} onChanged={refetchHelper} />
         <Show when={state.error}>
           <Notice tone="danger">{messageOf(state.error)}</Notice>

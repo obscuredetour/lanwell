@@ -17,6 +17,7 @@
 //! - [`bus`]: the helper's D-Bus and polkit names.
 //! - [`linux`]: rendering the Linux config files and systemd units.
 //! - [`system`]: what's installed and running on this machine (read without root).
+//! - [`updates`]: whether a newer release is out.
 
 pub mod bus;
 pub mod fileserver;
@@ -27,6 +28,7 @@ pub mod request;
 pub mod share;
 pub mod state;
 pub mod system;
+pub mod updates;
 
 pub use fileserver::{FileServer, FileServerStatus, Firewall, FirewallAccess};
 pub use mount::{
@@ -39,3 +41,4 @@ pub use share::{
     NfsExport, SmbAccess, SmbShare, check_nfs_exports, check_shareable, check_smb_shares,
 };
 pub use state::State;
+pub use updates::UpdateStatus;

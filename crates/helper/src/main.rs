@@ -5,7 +5,7 @@
 //! of change (polkit shows the password prompt), then applies it.
 //!
 //! It isn't started by hand: D-Bus starts it the first time the app calls it
-//! (see `linux/io.lanwell.Helper1.service`), and it exits after a couple of
+//! (see `linux/io.github.obscuredetour.lanwell.Helper1.service`), and it exits after a couple of
 //! minutes with nothing to do. It's put in place by a package, or by its own
 //! `install` command (see `install.rs`).
 //!

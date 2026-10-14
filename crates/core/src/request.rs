@@ -51,7 +51,7 @@ pub enum Request {
 }
 
 impl Request {
-    /// The polkit action that allows this request (see `crates/helper/linux/io.lanwell.policy`).
+    /// The polkit action that allows this request (see `crates/helper/linux/io.github.obscuredetour.lanwell.policy`).
     pub fn action(&self) -> &'static str {
         match self {
             Request::SetSmbShares { .. }
