@@ -102,8 +102,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 The Release workflow builds the tarball with `scripts/package.sh` and attaches
 it to a draft release; publish the draft once its notes are written. To try a
-build with install.sh first, run `scripts/package.sh`, then
-`LANWELL_RELEASE_URL="file://$PWD/dist" sh dist/install.sh`.
+build with install.sh first, run `scripts/package.sh`; it ends with the
+command that installs what it built.
 
 ## Layout
 
