@@ -17,6 +17,7 @@ import type { Request } from './bindings/Request';
 import type { SmbShare } from './bindings/SmbShare';
 import type { State } from './bindings/State';
 import type { SystemInfo } from './bindings/SystemInfo';
+import type { UpdateStatus } from './bindings/UpdateStatus';
 
 export type {
   FileServer,
@@ -30,6 +31,7 @@ export type {
   SmbShare,
   State,
   SystemInfo,
+  UpdateStatus,
 };
 
 export const systemInfo = () => invoke<SystemInfo>('system_info');
@@ -102,6 +104,17 @@ export const listServerExports = (host: string) => invoke<string[]>('list_server
 
 /** Opens a mount's folder in the file manager (mounting it if needed). */
 export const openMount = (mountPoint: string) => invoke<void>('open_mount', { mountPoint });
+
+// Updates. lanwell only says a new version is out; install.sh installs it.
+
+/** Whether a newer lanwell is out (only asks GitHub if install.sh installed this copy and checking is on). */
+export const updateStatus = () => invoke<UpdateStatus>('update_status');
+
+/** Turns the check for new versions (at launch and once a day) on or off. */
+export const setUpdateChecks = (on: boolean) => invoke<void>('set_update_checks', { on });
+
+/** Opens the latest release's notes in the browser. */
+export const openReleaseNotes = () => invoke<void>('open_release_notes');
 
 /** Asks for a folder; null if the person cancels. */
 export const chooseFolder = async () => {

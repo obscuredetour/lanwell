@@ -29,6 +29,10 @@ curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/ins
 Or download [install.sh](https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh),
 read it, and run `sh install.sh`. Running it again updates lanwell.
 
+lanwell checks GitHub for a new version when it starts and once a day, and
+says at the top of the window when one is out. To stop it, untick **Check
+for new versions** at the foot of the sidebar.
+
 The first time you change something, lanwell asks to install its helper, the
 part that changes system settings, and asks for an administrator's password.
 

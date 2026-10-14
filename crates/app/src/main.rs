@@ -9,6 +9,7 @@ mod discovery;
 #[cfg(target_os = "linux")]
 mod helper;
 mod mounts;
+mod updates;
 
 fn main() {
     tauri::Builder::default()
@@ -28,6 +29,9 @@ fn main() {
             commands::list_server_exports,
             commands::find_servers,
             commands::open_mount,
+            updates::update_status,
+            updates::set_update_checks,
+            updates::open_release_notes,
         ])
         .run(tauri::generate_context!())
         .expect("lanwell couldn't start");

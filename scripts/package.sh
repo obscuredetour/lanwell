@@ -4,6 +4,7 @@
 #   lanwell-<arch>-linux.tar.gz          the app, its helper, desktop entry and icons
 #   lanwell-<arch>-linux.tar.gz.sha256   its checksum
 #   install.sh                           the installer, for the release's assets
+#   latest.json                          the version, which the app checks for updates
 #
 # The release workflow runs this on a tag; it works the same locally. To try
 # install.sh against the result without a release:
@@ -43,6 +44,7 @@ mkdir dist
 tar -C "$stage" -czf "dist/$asset" lanwell
 (cd dist && sha256sum "$asset" >"$asset.sha256")
 cp install.sh dist/
+printf '{"version": "%s"}\n' "$version" >dist/latest.json
 
 echo "Packaged lanwell $version:"
 ls -l dist
