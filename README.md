@@ -5,7 +5,10 @@
 Mount other machines' shares, and share folders on your network, without editing
 fstab, smb.conf or /etc/exports.
 
-<img src="docs/screenshot.png" width="960" alt="Lanwell's Network folders page: two SMB shares and an NFS export mounted under ~/Network, and the form to connect to another">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img src="docs/screenshot-light.png" width="960" alt="Lanwell's Network folders page: two SMB shares and an NFS export mounted under ~/Network, and the form to connect to another">
+</picture>
 
 - **Network folders**: type `//nas.lan/media` (SMB) or `nas.lan:/srv/media` (NFS),
   and the share appears at `~/Network/media`. It connects when the folder's first
