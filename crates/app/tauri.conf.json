@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "lanwell",
+  "productName": "Lanwell",
   "identifier": "io.github.obscuredetour.lanwell",
   "build": {
     "devUrl": "http://localhost:1430",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "lanwell",
+        "title": "Lanwell",
         "width": 960,
         "height": 680,
         "minWidth": 560,

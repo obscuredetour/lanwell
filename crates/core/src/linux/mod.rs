@@ -69,4 +69,4 @@ impl Paths {
 }
 
 /// The first line of every file lanwell generates.
-pub const GENERATED_HEADER: &str = "# Written by lanwell from /etc/lanwell/state.json. Changes made here will be overwritten:\n# use lanwell to change these shares.\n";
+pub const GENERATED_HEADER: &str = "# Written by Lanwell from /etc/lanwell/state.json. Changes made here will be overwritten:\n# use Lanwell to change these shares.\n";

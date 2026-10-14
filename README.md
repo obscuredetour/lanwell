@@ -1,4 +1,4 @@
-# lanwell
+# Lanwell
 
 Mount other machines' shares, and share folders on your network, without editing
 fstab, smb.conf or /etc/exports.
@@ -11,7 +11,7 @@ fstab, smb.conf or /etc/exports.
   open it (people on this machine, or anyone), done. Set each person's Samba
   password from the same place.
 - **NFS exports** for Linux and other Unix machines, by host or network.
-- **Leaves your config alone.** lanwell writes files of its own and adds one
+- **Leaves your config alone.** Lanwell writes files of its own and adds one
   `include` line to smb.conf; anything you configured by hand stays as it was.
 
 For Linux; macOS maybe later. Rust core, a small privileged helper behind
@@ -20,26 +20,26 @@ polkit, and a Tauri + Solid app. See [docs/architecture.md](docs/architecture.md
 ## Install
 
 For x86_64 Linux, at least as new as Ubuntu 24.04 (Debian 13, Fedora 40, Arch).
-It installs lanwell for you, in `~/.local`, and doesn't need a password:
+It installs Lanwell for you, in `~/.local`, and doesn't need a password:
 
 ```bash
 curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh
 ```
 
 Or download [install.sh](https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh),
-read it, and run `sh install.sh`. Running it again updates lanwell.
+read it, and run `sh install.sh`. Running it again updates Lanwell.
 
-lanwell checks GitHub for a new version when it starts and once a day, and
+Lanwell checks GitHub for a new version when it starts and once a day, and
 says at the top of the window when one is out. To stop it, untick **Check
 for new versions** at the foot of the sidebar.
 
-The first time you change something, lanwell asks to install its helper, the
+The first time you change something, Lanwell asks to install its helper, the
 part that changes system settings, and asks for an administrator's password.
 
 You need WebKitGTK 4.1 and polkit (install.sh says if they're missing), and
-Samba or NFS for whichever you'll use; lanwell says what's missing.
+Samba or NFS for whichever you'll use; Lanwell says what's missing.
 
-To remove lanwell and its helper:
+To remove Lanwell and its helper:
 
 ```bash
 curl -fsSL https://github.com/obscuredetour/lanwell/releases/latest/download/install.sh | sh -s -- --uninstall
@@ -118,6 +118,6 @@ build with install.sh first, run `scripts/package.sh`, then
 
 ## License
 
-[MIT](LICENSE). lanwell runs the system's own tools as separate programs (Samba's
+[MIT](LICENSE). Lanwell runs the system's own tools as separate programs (Samba's
 `smbclient` and `smbpasswd`, cifs-utils' `mount.cifs`, nfs-utils' `exportfs`)
 rather than including their code.

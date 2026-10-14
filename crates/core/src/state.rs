@@ -38,7 +38,7 @@ pub struct State {
 pub enum StateError {
     #[error("couldn't read {path}: {source}")]
     Read { path: String, source: io::Error },
-    #[error("{path} isn't a lanwell state file lanwell can read: {source}")]
+    #[error("{path} isn't a Lanwell state file Lanwell can read: {source}")]
     Parse {
         path: String,
         source: serde_json::Error,

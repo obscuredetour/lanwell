@@ -42,7 +42,7 @@ export function HelperCard(props: { status: HelperStatus | undefined; onChanged:
           }
         >
           <p class="mt-1.5 text-fg-muted">
-            Shares stay as they are, but lanwell can't change them until the helper is installed again.
+            Shares stay as they are, but Lanwell can't change them until the helper is installed again.
           </p>
           <div class="mt-1.5 flex gap-3">
             <button type="button" class={`text-danger ${link}`} disabled={action.busy()} onClick={remove}>

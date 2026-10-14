@@ -8,4 +8,4 @@ the rest after changing it:
 cargo tauri icon source.svg -o .
 ```
 
-Then delete the `android/`, `ios/` and `Square*`/`StoreLogo` files it also makes (lanwell doesn't target those).
+Then delete the `android/`, `ios/` and `Square*`/`StoreLogo` files it also makes (Lanwell doesn't target those).

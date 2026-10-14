@@ -15,11 +15,10 @@
 set -eu
 
 repo="obscuredetour/lanwell"
-app_id="io.github.obscuredetour.lanwell"
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
 lib="$HOME/.local/lib/lanwell"
 bin="$HOME/.local/bin"
-desktop="$data/applications/$app_id.desktop"
+desktop="$data/applications/lanwell.desktop"
 icons="$data/icons/hicolor"
 icon_sizes="32 128 256 512"
 # Where lanwell installs its helper; see crates/helper/src/install.rs.
@@ -42,10 +41,10 @@ main() {
 
 install() {
   [ "$(id -u)" -ne 0 ] ||
-    fail "run this as yourself, not as root. lanwell installs for you, and asks for an administrator's password when it needs one."
-  [ "$(uname -s)" = Linux ] || fail "lanwell is for Linux."
+    fail "run this as yourself, not as root. Lanwell installs for you, and asks for an administrator's password when it needs one."
+  [ "$(uname -s)" = Linux ] || fail "Lanwell is for Linux."
   arch="$(uname -m)"
-  [ "$arch" = x86_64 ] || fail "lanwell's releases are for x86_64 so far, and this is $arch."
+  [ "$arch" = x86_64 ] || fail "Lanwell's releases are for x86_64 so far, and this is $arch."
   command -v curl >/dev/null || fail "curl isn't installed."
 
   if [ -n "${LANWELL_RELEASE_URL:-}" ]; then
@@ -69,7 +68,7 @@ install() {
 
   check_libraries "$new/lanwell"
   command -v pkexec >/dev/null ||
-    say "Note: pkexec isn't installed. lanwell needs it to install its helper; it's in your distribution's polkit (or pkexec) package."
+    say "Note: pkexec isn't installed. Lanwell needs it to install its helper; it's in your distribution's polkit (or pkexec) package."
 
   mkdir -p "$lib" "$bin" "$data/applications"
   # Rename into place, so a lanwell that's running keeps the files it started with.
@@ -85,21 +84,21 @@ install() {
       Exec=*) printf 'Exec="%s"\n' "$lib/lanwell" ;;
       *) printf '%s\n' "$line" ;;
     esac
-  done <"$new/$app_id.desktop" >"$desktop"
+  done <"$new/lanwell.desktop" >"$desktop"
   for size in $icon_sizes; do
     mkdir -p "$icons/${size}x$size/apps"
-    cp "$new/icons/$size.png" "$icons/${size}x$size/apps/$app_id.png"
+    cp "$new/icons/$size.png" "$icons/${size}x$size/apps/lanwell.png"
   done
 
-  say "Installed lanwell $(cat "$lib/VERSION") in $lib."
+  say "Installed Lanwell $(cat "$lib/VERSION") in $lib."
   case ":$PATH:" in
     *":$bin:"*) ;;
-    *) say "$bin isn't on your PATH, so start lanwell from your app menu (or add it to PATH)." ;;
+    *) say "$bin isn't on your PATH, so start Lanwell from your app menu (or add it to PATH)." ;;
   esac
   if [ -e "$helper" ]; then
-    say "Open lanwell; if its helper is older than this version, it offers to update it."
+    say "Open Lanwell; if its helper is older than this version, it offers to update it."
   else
-    say "Open lanwell from your app menu. To make changes, it asks to install its helper first."
+    say "Open Lanwell from your app menu. To make changes, it asks to install its helper first."
   fi
 }
 
@@ -110,11 +109,11 @@ check_libraries() {
   [ -n "$missing" ] || return 0
   case "$missing" in
     *GLIBC_*)
-      fail "this system's C library (glibc) is older than lanwell needs. lanwell is built on Ubuntu 24.04, and runs on distributions at least that new." ;;
+      fail "this system's C library (glibc) is older than Lanwell needs. Lanwell is built on Ubuntu 24.04, and runs on distributions at least that new." ;;
     *libwebkit2gtk-4.1*)
-      fail "lanwell needs WebKitGTK 4.1. $(install_hint webkit)" ;;
+      fail "Lanwell needs WebKitGTK 4.1. $(install_hint webkit)" ;;
     *)
-      fail "lanwell can't find these libraries:
+      fail "Lanwell can't find these libraries:
 $missing" ;;
   esac
 }
@@ -136,7 +135,7 @@ uninstall() {
   [ "$(id -u)" -ne 0 ] || fail "run this as yourself, not as root, so it finds your installation."
 
   if [ -e "$helper" ]; then
-    say "Removing lanwell's helper, which needs an administrator's password."
+    say "Removing Lanwell's helper, which needs an administrator's password."
     if command -v sudo >/dev/null; then
       sudo "$helper" uninstall
     else
@@ -152,10 +151,10 @@ uninstall() {
   fi
   rm -f "$desktop"
   for size in $icon_sizes; do
-    rm -f "$icons/${size}x$size/apps/$app_id.png"
+    rm -f "$icons/${size}x$size/apps/lanwell.png"
   done
 
-  say "Removed lanwell. Shares and network folders you set up stay as they are; their settings are in /etc/lanwell."
+  say "Removed Lanwell. Shares and network folders you set up stay as they are; their settings are in /etc/lanwell."
 }
 
 # Everything above only defines functions, so a download that's cut short

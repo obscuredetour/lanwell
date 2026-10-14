@@ -111,7 +111,7 @@ pub fn apply(
             let mut state = State::load(&paths.state)?;
             if !allow && !state.firewall_opened.contains(server) {
                 return Err(InvalidValue(format!(
-                    "lanwell didn't let {} through the firewall, so it leaves the firewall's rules alone.",
+                    "Lanwell didn't let {} through the firewall, so it leaves the firewall's rules alone.",
                     server.name()
                 ))
                 .into());

@@ -145,7 +145,7 @@ pub fn check_host(host: &str) -> Result<(), InvalidValue> {
     let allowed = |c: char| c.is_ascii_alphanumeric() || ".-:[]".contains(c);
     if host.is_empty() || !host.chars().all(allowed) {
         return Err(invalid(format!(
-            "\"{host}\" isn't a server name or address lanwell understands."
+            "\"{host}\" isn't a server name or address Lanwell understands."
         )));
     }
     Ok(())

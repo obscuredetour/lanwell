@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=lanwell
+Name=Lanwell
 GenericName=Network Shares
 Comment=Mount network shares and share folders on your network
 Exec=lanwell
-Icon=io.github.obscuredetour.lanwell
+Icon=lanwell
 Terminal=false
-Categories=Network;System;
+Categories=Network;FileTransfer;
 Keywords=samba;smb;nfs;share;mount;network;nas;
 StartupWMClass=lanwell

@@ -32,7 +32,7 @@ mkdir -p "$out/icons"
 # The release profile keeps line tables for backtraces; the download doesn't need them.
 strip -o "$out/lanwell" target/release/lanwell
 strip -o "$out/lanwell-helper" target/release/lanwell-helper
-cp crates/app/linux/io.github.obscuredetour.lanwell.desktop LICENSE "$out/"
+cp crates/app/linux/lanwell.desktop LICENSE "$out/"
 cp crates/app/icons/32x32.png "$out/icons/32.png"
 cp crates/app/icons/128x128.png "$out/icons/128.png"
 cp crates/app/icons/128x128@2x.png "$out/icons/256.png"

@@ -21,7 +21,7 @@ export function UpdateBanner(props: { status: UpdateStatus | undefined }) {
         <div class="mb-6 rounded-md border border-accent px-4 py-3">
           <div class="flex items-start gap-4">
             <div class="min-w-0 flex-1">
-              <p>lanwell {version()} is out. To update, run the installer again, then reopen lanwell:</p>
+              <p>Lanwell {version()} is out. To update, run the installer again, then reopen Lanwell:</p>
               <code class="mt-2 block rounded bg-field px-2 py-1 text-xs break-all select-all">{INSTALL_COMMAND}</code>
             </div>
             <div class="flex shrink-0 gap-2">

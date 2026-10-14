@@ -2,12 +2,12 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
   "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!--
-  What lanwell's helper may do, and who may ask it to. By default every change
+  What Lanwell's helper may do, and who may ask it to. By default every change
   needs an administrator's password, remembered for a few minutes
   (auth_admin_keep). Administrators can change that with a polkit rule.
 -->
 <policyconfig>
-  <vendor>lanwell</vendor>
+  <vendor>Lanwell</vendor>
 
   <action id="io.github.obscuredetour.lanwell.manage-shares">
     <description>Share folders on the network</description>
