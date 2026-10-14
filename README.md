@@ -1,3 +1,5 @@
+<img src="crates/app/icons/logo.svg" width="80" alt="">
+
 # Lanwell
 
 Mount other machines' shares, and share folders on your network, without editing
