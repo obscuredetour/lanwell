@@ -105,6 +105,9 @@ pub fn apply(
             mounts::remove(mount_point, paths, services)?;
         }
         Request::SetServerRunning { server, running } => {
+            if *server == FileServer::Samba && *running {
+                ensure_samba_config(paths)?;
+            }
             services.set_running(*server, *running)?;
         }
         Request::SetFirewall { server, allow } => {
@@ -153,6 +156,20 @@ fn drive_of(path: &AbsolutePath, mount_table: &str) -> Result<Option<String>, Ap
         .into());
     }
     Ok((drive != "/").then_some(drive))
+}
+
+/// Makes sure Samba has a config to start with. Some distributions (Arch)
+/// install it without an smb.conf, and it won't start until there is one:
+/// until the first share was added, Start just failed there.
+fn ensure_samba_config(paths: &Paths) -> Result<(), ApplyError> {
+    if !paths.samba_shares.exists() {
+        let state = State::load(&paths.state)?;
+        write(
+            &paths.samba_shares,
+            &samba::render_shares(&state.smb_shares),
+        )?;
+    }
+    include_from_smb_conf(paths)
 }
 
 /// Makes sure smb.conf includes lanwell's shares, creating smb.conf if the
@@ -765,6 +782,47 @@ mod tests {
         let result = run(request, &paths, &services);
         assert!(matches!(result, Err(ApplyError::Invalid(_))));
         assert!(services.log().is_empty());
+    }
+
+    #[test]
+    fn starting_samba_gives_it_a_config() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::under(root.path());
+        let services = Recorded::default();
+        let start = Request::SetServerRunning {
+            server: FileServer::Samba,
+            running: true,
+        };
+
+        // A fresh install with no smb.conf (Arch): Samba won't start without one.
+        run(start.clone(), &paths, &services).unwrap();
+        let smb_conf = fs::read_to_string(&paths.smb_conf).unwrap();
+        assert!(smb_conf.contains("[global]"));
+        assert!(smb_conf.contains("include = "));
+        assert!(paths.samba_shares.exists());
+        assert_eq!(services.log(), ["start Samba"]);
+
+        // Started again later: the files are left as they are.
+        fs::write(&paths.smb_conf, "[global]\n   workgroup = HOME\n").unwrap();
+        run(start, &paths, &services).unwrap();
+        let smb_conf = fs::read_to_string(&paths.smb_conf).unwrap();
+        assert!(smb_conf.starts_with("[global]\n   workgroup = HOME\n"));
+        assert_eq!(smb_conf.matches("include = ").count(), 1);
+
+        // Stopping, or NFS, doesn't touch Samba's files.
+        let stop = Request::SetServerRunning {
+            server: FileServer::Samba,
+            running: false,
+        };
+        let nfs = Request::SetServerRunning {
+            server: FileServer::Nfs,
+            running: true,
+        };
+        let other_root = tempfile::tempdir().unwrap();
+        let other = Paths::under(other_root.path());
+        run(stop, &other, &services).unwrap();
+        run(nfs, &other, &services).unwrap();
+        assert!(!other.smb_conf.exists());
     }
 
     #[test]

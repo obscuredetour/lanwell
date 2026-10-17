@@ -131,7 +131,7 @@ since NFS trusts what each client says about who its users are.
 | `/etc/lanwell/state.json` | The source of truth: every share and export Lanwell manages. World-readable, no secrets, so the app reads it without a password. |
 | `/etc/samba/lanwell.conf` | Generated share sections. Included from smb.conf. |
 | `/etc/exports.d/lanwell.exports` | Generated exports. `exportfs` reads every file in exports.d. |
-| `/etc/samba/smb.conf` | Not Lanwell's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), Lanwell writes a minimal one, which is the user's from then on. |
+| `/etc/samba/smb.conf` | Not Lanwell's. It gets one `include` line; if there's no smb.conf at all (Arch ships none), Lanwell writes a minimal one when a share is added or Samba is started, since Samba won't start without one; it's the user's from then on. |
 | `/etc/systemd/system/<mount point>.mount` | A mount, as a systemd unit named after its folder (`systemd-escape --path`). |
 | `/etc/systemd/system/<mount point>.automount` | For a mount that waits to be opened: mounts it on first access. |
 | `/etc/lanwell/credentials/<mount point>` | A mount's user name and password, for mount.cifs. Mode 600, in a 700 folder: only root can read them. Never in the state file. |
