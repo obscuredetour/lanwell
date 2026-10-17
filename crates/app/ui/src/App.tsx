@@ -7,6 +7,7 @@ import { FolderOpen, HardDrive, Network } from './icons';
 import { AboutCard } from './components/AboutCard';
 import { HelperBanner } from './components/HelperBanner';
 import { HelperCard } from './components/HelperCard';
+import { LeaveDialog } from './components/LeaveDialog';
 import { MountsPage } from './components/mounts/MountsPage';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
@@ -61,6 +62,7 @@ export function App() {
 
   return (
     <div class="flex h-full">
+      <LeaveDialog />
       <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-border bg-panel p-3">
         <h1 class="px-2.5 pt-1 pb-1 text-lg font-semibold">Lanwell</h1>
         <NavHeading>On other computers</NavHeading>

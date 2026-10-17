@@ -2,7 +2,6 @@
 // the page or closing the window can ask first. One form at a time has
 // anything unsaved: each page has one.
 
-import { ask } from '@tauri-apps/plugin-dialog';
 import { createEffect, createSignal, onCleanup } from 'solid-js';
 
 export interface Unsaved {
@@ -27,18 +26,39 @@ export function trackUnsaved(describe: () => Unsaved | null) {
   onCleanup(() => setUnsaved(null));
 }
 
+/** Whether to leave something unsaved behind, put to the person (by `LeaveDialog`). */
+export interface Question {
+  /** What would be lost: what the form said isn't saved. */
+  what: string;
+  /** What they're about to do: "Leave" or "Close". */
+  verb: string;
+  /** Their answer: go ahead, or stay. */
+  answer: (leave: boolean) => void;
+}
+
+const [question, setQuestion] = createSignal<Question | null>(null);
+
+/** The question waiting for an answer, if any. */
+export { question };
+
 /**
  * Whether to go ahead and `verb` ("Leave", "Close"): yes when nothing is
- * unsaved, otherwise whatever the person answers.
+ * unsaved, otherwise whatever the person answers. While one question is
+ * open, another is answered "stay" at once.
  */
-export async function confirmLeaving(verb: string): Promise<boolean> {
+export function confirmLeaving(verb: string): Promise<boolean> {
   const pending = unsaved();
-  if (!pending) return true;
-  return ask(`${pending.what} ${verb} anyway?`, {
-    title: 'Lanwell',
-    kind: 'warning',
-    okLabel: verb,
-    cancelLabel: 'Stay',
+  if (!pending) return Promise.resolve(true);
+  if (question()) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    setQuestion({
+      what: pending.what,
+      verb,
+      answer: (leave) => {
+        setQuestion(null);
+        resolve(leave);
+      },
+    });
   });
 }
 
