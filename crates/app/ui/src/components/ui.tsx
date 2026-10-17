@@ -5,6 +5,7 @@ import { createMemo, createSignal, For, Show, splitProps } from 'solid-js';
 
 import { messageOf } from '../api';
 import { Pencil, X } from '../icons';
+import { unsaved } from './unsaved';
 
 export function Section(props: ParentProps<{ title: string; description?: string }>) {
   return (
@@ -48,11 +49,22 @@ export const inputClass =
  * The section holding an add-or-edit form. Adding, it's a plain section
  * titled `title`. Editing (`editing` names what's edited), it becomes a
  * panel that can't be mistaken for adding: an accent border and tint, an
- * "Editing" label, a × to stop, and a brief ring as it appears.
+ * "Editing" label, a × to stop, and a brief ring as it appears. Either way,
+ * once the form holds something that isn't saved, it says so under the
+ * title (see `trackUnsaved`), where it's seen while the button isn't.
  */
 export function FormSection(props: ParentProps<{ title: string; editing: string | null; onCancel: () => void }>) {
   return (
-    <Show when={props.editing} keyed fallback={<Section title={props.title}>{props.children}</Section>}>
+    <Show
+      when={props.editing}
+      keyed
+      fallback={
+        <Section title={props.title}>
+          <UnsavedLine />
+          {props.children}
+        </Section>
+      }
+    >
       {(name) => (
         <section
           aria-label={`Editing ${name}`}
@@ -65,7 +77,7 @@ export function FormSection(props: ParentProps<{ title: string; editing: string 
                 Editing
               </div>
               <h2 class="mt-0.5 truncate text-base font-semibold">{name}</h2>
-              <p class="mt-0.5 text-xs text-fg-muted">Nothing changes until you save.</p>
+              <UnsavedLine fallback="Nothing changes until you save." />
             </div>
             <button
               type="button"
@@ -79,6 +91,26 @@ export function FormSection(props: ParentProps<{ title: string; editing: string 
           </div>
           <div class="mt-3">{props.children}</div>
         </section>
+      )}
+    </Show>
+  );
+}
+
+/** What the form holds that isn't saved yet, and that nothing changes until it is. */
+function UnsavedLine(props: { fallback?: string }) {
+  return (
+    <Show
+      when={unsaved()}
+      fallback={
+        <Show when={props.fallback}>
+          <p class="mt-0.5 text-xs text-fg-muted">{props.fallback}</p>
+        </Show>
+      }
+    >
+      {(pending) => (
+        <p class="mt-0.5 mb-3 text-xs text-warning" role="status">
+          {pending().what} Nothing changes until you press {pending().button}.
+        </p>
       )}
     </Show>
   );

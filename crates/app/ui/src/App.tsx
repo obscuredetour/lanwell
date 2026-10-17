@@ -1,3 +1,4 @@
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { JSX } from 'solid-js';
 import { createResource, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
@@ -10,6 +11,7 @@ import { MountsPage } from './components/mounts/MountsPage';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
 import { Notice } from './components/ui';
+import { confirmLeaving } from './components/unsaved';
 import { UpdateBanner } from './components/UpdateBanner';
 
 type Page = 'mounts' | 'samba' | 'nfs';
@@ -29,10 +31,19 @@ export function App() {
   onCleanup(() => clearInterval(daily));
   const [page, setPage] = createSignal<Page>('mounts');
 
+  // A form with something unsaved is lost with its page, or the window: ask first.
+  const goTo = async (next: Page) => {
+    if (page() !== next && (await confirmLeaving('Leave'))) setPage(next);
+  };
+  const closing = getCurrentWindow().onCloseRequested(async (event) => {
+    if (!(await confirmLeaving('Close'))) event.preventDefault();
+  });
+  onCleanup(() => void closing.then((unlisten) => unlisten()));
+
   const NavItem = (props: { page: Page; icon: JSX.Element; label: string; detail: string }) => (
     <button
       type="button"
-      onClick={() => setPage(props.page)}
+      onClick={() => void goTo(props.page)}
       class="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-hover"
       classList={{ 'bg-hover': page() === props.page }}
     >

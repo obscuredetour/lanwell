@@ -4,6 +4,7 @@ import { createSignal, Show } from 'solid-js';
 
 import { chooseFolder, type NfsExport, setNfsExports, type SystemInfo } from '../api';
 import { ServerStatus } from './ServerStatus';
+import { same, trackUnsaved } from './unsaved';
 import {
   Button,
   createAction,
@@ -137,9 +138,19 @@ function ExportForm(props: {
       .split(/[\s,]+/)
       .filter(Boolean);
 
+  const nfsExport = (): NfsExport => ({ path: path(), readOnly: readOnly(), clients: clientList() });
+
+  trackUnsaved(() => {
+    if (initial) {
+      return same(nfsExport(), initial) ? null : { what: `Changes to “${initial.path}” aren't saved.`, button: 'Save' };
+    }
+    if (!path() && !clients().trim()) return null;
+    return { what: path() ? `“${path()}” isn't exported yet.` : "The export isn't saved yet.", button: 'Export' };
+  });
+
   const submit = (event: SubmitEvent) => {
     event.preventDefault();
-    props.onSave({ path: path(), readOnly: readOnly(), clients: clientList() });
+    props.onSave(nfsExport());
   };
 
   return (
