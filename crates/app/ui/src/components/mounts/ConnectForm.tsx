@@ -15,6 +15,7 @@ import {
 import type { NfsVersion } from '../../bindings/NfsVersion';
 import type { SmbVersion } from '../../bindings/SmbVersion';
 import { Button, createAction, ErrorText, Field, inputClass, Notice, Segmented } from '../ui';
+import { same, trackUnsaved } from '../unsaved';
 import { lastName, parseNfsAddress, parseSmbAddress, tildify } from './addresses';
 import { Browse } from './Browse';
 import { FoundServers } from './FoundServers';
@@ -134,6 +135,24 @@ export function ConnectForm(props: {
     mountPoint: folder(),
     when: atStartup() ? 'startup' : 'firstAccess',
     readOnly: readOnly(),
+  });
+
+  trackUnsaved(() => {
+    const editing = props.editing;
+    if (editing) {
+      const saved: Mount = {
+        share: editing.share,
+        mountPoint: editing.mountPoint,
+        when: editing.when,
+        readOnly: editing.readOnly,
+      };
+      return same(mount(), saved) && password() === ''
+        ? null
+        : { what: `Changes to “${editing.share.address}” aren't saved.`, button: 'Save' };
+    }
+    if (!address() && !username() && !password() && customFolder() === null) return null;
+    const what = address().trim() ? `“${address().trim()}” isn't connected yet.` : "The connection isn't saved yet.";
+    return { what, button: 'Connect' };
   });
 
   const submit = async (event: SubmitEvent) => {

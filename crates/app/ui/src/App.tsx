@@ -1,3 +1,4 @@
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { JSX } from 'solid-js';
 import { createResource, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
@@ -6,10 +7,12 @@ import { FolderOpen, HardDrive, Network } from './icons';
 import { AboutCard } from './components/AboutCard';
 import { HelperBanner } from './components/HelperBanner';
 import { HelperCard } from './components/HelperCard';
+import { LeaveDialog } from './components/LeaveDialog';
 import { MountsPage } from './components/mounts/MountsPage';
 import { NfsPage } from './components/NfsPage';
 import { SambaPage } from './components/SambaPage';
 import { Notice } from './components/ui';
+import { confirmLeaving } from './components/unsaved';
 import { UpdateBanner } from './components/UpdateBanner';
 
 type Page = 'mounts' | 'samba' | 'nfs';
@@ -29,10 +32,19 @@ export function App() {
   onCleanup(() => clearInterval(daily));
   const [page, setPage] = createSignal<Page>('mounts');
 
+  // A form with something unsaved is lost with its page, or the window: ask first.
+  const goTo = async (next: Page) => {
+    if (page() !== next && (await confirmLeaving('Leave'))) setPage(next);
+  };
+  const closing = getCurrentWindow().onCloseRequested(async (event) => {
+    if (!(await confirmLeaving('Close'))) event.preventDefault();
+  });
+  onCleanup(() => void closing.then((unlisten) => unlisten()));
+
   const NavItem = (props: { page: Page; icon: JSX.Element; label: string; detail: string }) => (
     <button
       type="button"
-      onClick={() => setPage(props.page)}
+      onClick={() => void goTo(props.page)}
       class="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-hover"
       classList={{ 'bg-hover': page() === props.page }}
     >
@@ -50,6 +62,7 @@ export function App() {
 
   return (
     <div class="flex h-full">
+      <LeaveDialog />
       <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-border bg-panel p-3">
         <h1 class="px-2.5 pt-1 pb-1 text-lg font-semibold">Lanwell</h1>
         <NavHeading>On other computers</NavHeading>

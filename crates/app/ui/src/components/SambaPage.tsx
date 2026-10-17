@@ -4,6 +4,7 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 
 import { chooseFolder, localUsers, setSmbPassword, setSmbShares, type SmbShare, type SystemInfo } from '../api';
 import { ServerStatus } from './ServerStatus';
+import { same, trackUnsaved } from './unsaved';
 import {
   Button,
   createAction,
@@ -158,14 +159,24 @@ function ShareForm(props: {
   const toggleUser = (user: string, on: boolean) =>
     setChosenUsers((users) => (on ? [...users, user] : users.filter((other) => other !== user)));
 
+  const share = (): SmbShare => ({
+    name: name().trim(),
+    path: path(),
+    readOnly: readOnly(),
+    access: guest() ? { kind: 'guest' } : { kind: 'users', users: chosenUsers() },
+  });
+
+  trackUnsaved(() => {
+    if (initial) {
+      return same(share(), initial) ? null : { what: `Changes to “${initial.name}” aren't saved.`, button: 'Save' };
+    }
+    const label = name().trim() || path();
+    return label ? { what: `“${label}” isn't shared yet.`, button: 'Share' } : null;
+  });
+
   const submit = (event: SubmitEvent) => {
     event.preventDefault();
-    props.onSave({
-      name: name().trim(),
-      path: path(),
-      readOnly: readOnly(),
-      access: guest() ? { kind: 'guest' } : { kind: 'users', users: chosenUsers() },
-    });
+    props.onSave(share());
   };
 
   return (
